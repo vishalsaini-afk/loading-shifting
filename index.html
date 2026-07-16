@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Labour Log — Unloading &amp; Shifting</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=JetBrains+Mono:wght@400;700&family=Noto+Sans+Devanagari:wght@400;600;800&display=swap');
+  :root{
+    --bg:#0e0f0d; --panel:#181a17; --panel-2:#20231f; --line:#2e322b;
+    --hi:#e2f14d; --txt:#eceee9; --mut:#8c9187;
+    --shift:#4dd0e1; --bad:#ff6b5e; --ok:#7ddb8f;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:Archivo,'Noto Sans Devanagari',system-ui,sans-serif;padding-bottom:30px}
+  header{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line);
+    padding:12px 14px;display:flex;align-items:center;gap:10px}
+  .mark{width:32px;height:32px;border-radius:6px;background:var(--hi);display:grid;place-items:center;
+    color:#0e0f0d;font-weight:800;font-size:15px;flex:none}
+  h1{font-size:14px;margin:0;font-weight:800;text-transform:uppercase;letter-spacing:.02em}
+  .sub{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--mut);margin-top:2px;letter-spacing:.08em}
+  .hspace{flex:1}
+  .icobtn{background:var(--panel);border:1px solid var(--line);color:var(--txt);border-radius:6px;
+    padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:Archivo,'Noto Sans Devanagari'}
+
+  .tabs{display:flex;gap:6px;padding:10px 14px 0;max-width:960px;margin:0 auto}
+  .tabs button{flex:1;padding:10px;border:1px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0;
+    background:var(--panel);color:var(--mut);font-family:Archivo,'Noto Sans Devanagari';font-weight:700;
+    font-size:12px;text-transform:uppercase;letter-spacing:.06em;cursor:pointer}
+  .tabs button.on{background:var(--hi);color:#0e0f0d;border-color:var(--hi)}
+  .wrap{max-width:960px;margin:0 auto;padding:14px}
+
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:9px 11px}
+  .stat b{display:block;font-family:'JetBrains Mono',monospace;font-size:18px;color:var(--hi);font-weight:700}
+  .stat span{font-size:9px;color:var(--mut);text-transform:uppercase;letter-spacing:.08em}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+  .card h2{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:0 0 12px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .full{grid-column:1/-1}
+  label{display:block;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin-bottom:4px}
+  input,select,textarea{width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
+    color:var(--txt);padding:10px;font-size:15px;font-family:Archivo,'Noto Sans Devanagari',sans-serif}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--hi);border-color:var(--hi)}
+  input[type=number]{font-family:'JetBrains Mono',monospace}
+  textarea{resize:vertical;min-height:54px}
+  .mic-wrap{position:relative}
+  .mic{position:absolute;right:6px;bottom:6px;background:var(--panel);
+    border:1px solid var(--line);color:var(--mut);border-radius:6px;width:34px;height:34px;cursor:pointer;font-size:14px}
+  .mic.rec{background:var(--bad);color:#fff;border-color:var(--bad);animation:pulse 1s infinite}
+  @keyframes pulse{50%{opacity:.55}}
+  .mic-wrap input,.mic-wrap textarea{padding-right:46px}
+  .hint{font-size:11px;color:var(--mut);margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .hint button{background:none;border:1px solid var(--line);color:var(--hi);border-radius:5px;
+    padding:5px 9px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;
+    font-family:Archivo,'Noto Sans Devanagari'}
+
+  .seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .seg button{padding:12px;border-radius:6px;border:1px solid var(--line);background:var(--panel-2);
+    color:var(--mut);font-family:Archivo,'Noto Sans Devanagari';font-weight:600;font-size:14px;cursor:pointer}
+  .seg button[aria-pressed=true]{background:var(--hi);color:#0e0f0d;border-color:var(--hi)}
+  .seg button.shiftbtn[aria-pressed=true]{background:var(--shift);border-color:var(--shift)}
+  .seg button.reworkbtn[aria-pressed=true]{background:var(--bad);color:#fff;border-color:var(--bad)}
+  .tag.rw{color:var(--bad);border-color:#4f2f2f}
+  .btn{width:100%;padding:14px;border:0;border-radius:8px;background:var(--hi);color:#0e0f0d;
+    font-weight:800;font-size:14px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;margin-top:12px;
+    font-family:Archivo,'Noto Sans Devanagari'}
+  .btn.ghost{background:transparent;color:var(--mut);border:1px solid var(--line);margin-top:8px}
+
+  .bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+  .bar input,.bar select{flex:1;min-width:120px;padding:8px;font-size:13px}
+
+  .dayhead{display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:11px;
+    color:var(--mut);padding:0 2px 6px;border-bottom:1px solid var(--line);margin-bottom:8px;letter-spacing:.05em}
+  .dayhead b{color:var(--txt)}
+  .daygroup{margin-bottom:14px}
+  .row{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--hi);
+    border-radius:8px;padding:11px 12px;margin-bottom:8px}
+  .row.shift{border-left-color:var(--shift)}
+  .r1{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+  .offer{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--hi)}
+  .row.shift .offer{color:var(--shift)}
+  .cost{font-family:'JetBrains Mono',monospace;font-size:13px}
+  .cust{font-size:15px;font-weight:600;margin:3px 0 2px}
+  .meta{font-size:12px;color:var(--mut);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .tag{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+    padding:2px 6px;border-radius:3px;background:var(--panel-2);border:1px solid var(--line)}
+  .tag.sync{color:var(--ok);border-color:#2f4f37}
+  .tag.pend{color:var(--bad);border-color:#4f2f2f}
+  .note{font-size:12px;color:var(--mut);margin-top:6px;font-style:italic}
+  .acts{display:flex;gap:6px;margin-top:8px}
+  .acts button{background:none;border:1px solid var(--line);color:var(--mut);border-radius:5px;font-size:10px;
+    letter-spacing:.08em;text-transform:uppercase;padding:5px 9px;cursor:pointer;
+    font-family:Archivo,'Noto Sans Devanagari'}
+  .acts button.del:hover{color:var(--bad);border-color:var(--bad)}
+  .empty{text-align:center;color:var(--mut);padding:34px 16px;font-size:13px;border:1px dashed var(--line);border-radius:10px}
+  .foot{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  .foot button{flex:1;min-width:120px;padding:11px;border-radius:8px;border:1px solid var(--line);background:var(--panel);
+    color:var(--txt);font-family:Archivo,'Noto Sans Devanagari';font-weight:600;font-size:12px;
+    text-transform:uppercase;letter-spacing:.05em;cursor:pointer}
+
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%) translateY(90px);background:var(--hi);
+    color:#0e0f0d;padding:11px 18px;border-radius:30px;font-weight:700;font-size:13px;transition:transform .25s;z-index:60}
+  .toast.on{transform:translateX(-50%) translateY(0)}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;
+    z-index:50;padding:16px}
+  .modal.on{display:flex}
+  .modal .card{max-width:440px;width:100%;margin:0;max-height:90vh;overflow:auto}
+  .hide{display:none !important}
+
+  /* live invoice preview (light) */
+  .paper{background:#fff;color:#000;border-radius:10px;padding:18px;overflow-x:auto}
+  .paper .ph{display:flex;justify-content:space-between;border-bottom:2px solid #000;padding-bottom:8px}
+  .paper .co{font-size:17px;font-weight:800}
+  .paper .cosub{font-size:10px;color:#555;margin-top:2px}
+  .paper .doct{font-size:13px;font-weight:800;text-align:right;text-transform:uppercase}
+  .paper .docm{font-size:10px;text-align:right;color:#555;font-family:'JetBrains Mono',monospace;margin-top:3px}
+  .paper .binfo{display:flex;justify-content:space-between;gap:12px;margin:12px 0;font-size:11px}
+  .paper .binfo b{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#666;margin-bottom:2px}
+  .paper table{width:100%;border-collapse:collapse;font-size:10.5px;margin-top:8px}
+  .paper th{background:#111;color:#fff;text-align:left;padding:6px 5px;font-size:9px;text-transform:uppercase;letter-spacing:.05em}
+  .paper td{border-bottom:1px solid #ddd;padding:5px}
+  .paper td.n,.paper th.n{text-align:right;font-family:'JetBrains Mono',monospace}
+  .paper tr.tot td{border-top:2px solid #000;border-bottom:0;font-weight:800;font-size:12px;padding-top:8px}
+  .paper .totals{width:55%;margin-left:45%;margin-top:6px}
+  .paper .words{margin-top:8px;font-size:10.5px;border:1px solid #000;padding:6px}
+  .paper .sig{display:flex;justify-content:space-between;gap:10px;margin-top:44px;font-size:10px}
+  .paper .sig div{border-top:1px solid #000;padding-top:4px;flex:1;text-align:center}
+  .paper .fnote{margin-top:12px;font-size:9px;color:#666;border-top:1px solid #ccc;padding-top:6px}
+
+  /* ---------- PRINT ---------- */
+  #printArea{display:none}
+  @media print{
+    body{background:#fff;color:#000;padding:0}
+    header,.tabs,.wrap,.toast,.modal{display:none !important}
+    #printArea{display:block;font-family:Archivo,'Noto Sans Devanagari',sans-serif;color:#000}
+    #printArea .paper{padding:0}
+    #printArea table{page-break-inside:auto}
+    #printArea tr{page-break-inside:avoid}
+    #printArea thead{display:table-header-group}
+    @page{size:A4;margin:14mm}
+  }
+  @media(max-width:520px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="mark">L</div>
+  <div>
+    <h1 data-t="appName">Labour Log</h1>
+    <div class="sub" id="syncLine">OFFLINE · LOCAL ONLY</div>
+  </div>
+  <div class="hspace"></div>
+  <button class="icobtn" id="langBtn">हिंदी</button>
+  <button class="icobtn" id="gear">⚙</button>
+</header>
+
+<div class="tabs">
+  <button class="on" data-tab="entry" data-t="tabEntry">Entry</button>
+  <button data-tab="records" data-t="tabRecords">Records</button>
+  <button data-tab="invoice" data-t="tabInvoice">Invoice</button>
+</div>
+
+<div class="wrap">
+
+  <section id="tab-entry">
+    <div class="card">
+      <h2 id="formTitle" data-t="newEntry">New entry</h2>
+      <div class="grid">
+        <div><label data-t="lDate">Date</label><input type="date" id="f_date"></div>
+        <div><label data-t="lOffer">Offer no.</label><input id="f_offer" placeholder="75057/14" autocomplete="off"></div>
+
+        <div class="full mic-wrap">
+          <label data-t="lCust">Customer name</label>
+          <input id="f_cust" autocomplete="off">
+          <button class="mic" data-mic="f_cust">🎙</button>
+        </div>
+
+        <div class="full mic-wrap">
+          <label data-t="lLoc">Location</label>
+          <input id="f_loc" autocomplete="off">
+          <button class="mic" data-mic="f_loc">🎙</button>
+        </div>
+
+        <div><label data-t="lNum">No. of labours</label><input type="number" id="f_num" min="1" step="1" value="2"></div>
+        <div><label data-t="lRate">Rate per labour (₹)</label><input type="number" id="f_rate" min="0" step="50" value="800"></div>
+
+        <div class="full">
+          <label data-t="lPurpose">Purpose</label>
+          <div class="seg">
+            <button type="button" id="pUnload" aria-pressed="true" data-t="unloading">Unloading</button>
+            <button type="button" class="shiftbtn" id="pShift" aria-pressed="false" data-t="shifting">Shifting</button>
+          </div>
+        </div>
+
+        <div class="full">
+          <label data-t="lReason">Reason</label>
+          <div class="seg">
+            <button type="button" id="rWork" aria-pressed="true" data-t="work">Work</button>
+            <button type="button" class="reworkbtn" id="rRework" aria-pressed="false" data-t="rework">Rework</button>
+          </div>
+        </div>
+
+        <div class="full mic-wrap">
+          <label data-t="lNote">Remarks</label>
+          <textarea id="f_note"></textarea>
+          <button class="mic" data-mic="f_note">🎙</button>
+        </div>
+      </div>
+      <div class="hint">
+        <span data-t="dictHint">Speak in Hindi or English — tap the mic.</span>
+        <button id="trBtn" data-t="translate">Translate to English</button>
+      </div>
+      <button class="btn" id="save" data-t="saveEntry">Save entry</button>
+      <button class="btn ghost hide" id="cancel" data-t="cancelEdit">Cancel edit</button>
+    </div>
+  </section>
+
+  <section id="tab-records" class="hide">
+    <div class="stats">
+      <div class="stat"><b id="sEntries">0</b><span data-t="sEntries">Entries</span></div>
+      <div class="stat"><b id="sLabour">0</b><span data-t="sLabour">Labours</span></div>
+      <div class="stat"><b id="sCost">₹0</b><span data-t="sAmount">Amount</span></div>
+    </div>
+    <div class="bar">
+      <input id="q" data-tp="search" placeholder="Search offer, customer, location">
+      <select id="fMonth"></select>
+      <select id="fPurpose">
+        <option value="" data-t="bothPurpose">Both purposes</option>
+        <option value="Unloading" data-t="unloading">Unloading</option>
+        <option value="Shifting" data-t="shifting">Shifting</option>
+      </select>
+      <select id="fReason">
+        <option value="" data-t="bothReason">Work + Rework</option>
+        <option value="Work" data-t="work">Work</option>
+        <option value="Rework" data-t="rework">Rework</option>
+      </select>
+    </div>
+    <div id="list"></div>
+    <div class="foot">
+      <button id="printReg" data-t="printReg">Print register</button>
+      <button id="csv" data-t="exportCsv">Export CSV</button>
+      <button id="pull" data-t="pullSheet">Sync from sheet</button>
+    </div>
+  </section>
+
+  <section id="tab-invoice" class="hide">
+    <div class="card">
+      <h2 data-t="makeInv">Create invoice</h2>
+      <div class="grid">
+        <div><label data-t="iNo">Invoice no.</label><input id="i_no" readonly>
+          <div class="hint"><span data-t="autoNo">Auto-generated from the billing period.</span>
+            <button id="unlockNo" data-t="editNo">Edit</button></div></div>
+        <div><label data-t="iDate">Invoice date</label><input type="date" id="i_date"></div>
+        <div><label data-t="iPeriod">Billing period (fortnight)</label><select id="i_month"></select></div>
+        <div><label data-t="iPurpose">Purpose</label>
+          <select id="i_purpose">
+            <option value="" data-t="bothPurpose">Both purposes</option>
+            <option value="Unloading" data-t="unloading">Unloading</option>
+            <option value="Shifting" data-t="shifting">Shifting</option>
+          </select>
+        </div>
+        <div><label data-t="lReason">Reason</label>
+          <select id="i_reason">
+            <option value="" data-t="bothReason">Work + Rework</option>
+            <option value="Work" data-t="work">Work</option>
+            <option value="Rework" data-t="rework">Rework</option>
+          </select>
+        </div>
+        <div><label data-t="iGst">GST %</label><input type="number" id="i_gst" value="0" min="0" step="1"></div>
+        <div class="full"><label data-t="iCustFilter">Only this customer / offer (optional)</label>
+          <input id="i_filter" placeholder="75057/14"></div>
+        <div class="full"><label data-t="iFrom">Billed by (contractor / your firm)</label>
+          <input id="i_from" placeholder="Name, address, phone, GSTIN"></div>
+        <div class="full"><label data-t="iTo">Billed to</label>
+          <input id="i_to" value="Lingel Windows &amp; Doors Technologies Pvt. Ltd."></div>
+        <div class="full"><label data-t="iPo">PO / reference</label><input id="i_po"></div>
+      </div>
+      <button class="btn" id="genInv" data-t="previewInv">Preview &amp; print invoice</button>
+    </div>
+    <div id="invPreview"></div>
+  </section>
+
+</div>
+
+<div class="modal" id="setModal">
+  <div class="card">
+    <h2 data-t="settings">Google Sheet connection</h2>
+    <label data-t="sheetUrl">Apps Script web app URL (/exec)</label>
+    <input id="sheetUrl" placeholder="https://script.google.com/macros/s/AKfy.../exec">
+    <div class="hint"><span data-t="sheetHelp">Paste the /exec URL from your Apps Script deployment.</span></div>
+    <label style="margin-top:10px" data-t="company">Company name on printouts</label>
+    <input id="coName">
+    <label style="margin-top:10px" data-t="prefix">Invoice number prefix</label>
+    <input id="coPrefix" placeholder="LBR">
+    <button class="btn" id="saveSet" data-t="connect">Save &amp; connect</button>
+    <button class="btn ghost" id="closeSet" data-t="close">Close</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="printArea"></div>
+
+<script>
+/* ================= i18n ================= */
+const T={
+ en:{appName:'Labour Log',tabEntry:'Entry',tabRecords:'Records',tabInvoice:'Invoice',
+  newEntry:'New entry',editEntry:'Editing entry',lDate:'Date',lOffer:'Offer no.',lCust:'Customer name',
+  lLoc:'Location',lNum:'No. of labours',lRate:'Rate per labour (₹)',lPurpose:'Purpose',lNote:'Remarks',
+  unloading:'Unloading',shifting:'Shifting',lReason:'Reason',work:'Work',rework:'Rework',
+  bothReason:'Work + Rework',allPeriods:'All periods',h1:'1–15',h2:'16–end',cReason:'Reason',
+  saveEntry:'Save entry',updateEntry:'Update entry',
+  cancelEdit:'Cancel edit',dictHint:'Speak in Hindi or English — tap the mic.',translate:'Translate to English',
+  sEntries:'Entries',sLabour:'Labours',sAmount:'Amount',search:'Search offer, customer, location',
+  bothPurpose:'Both purposes',allMonths:'All months',exportCsv:'Export CSV',printReg:'Print register',
+  pullSheet:'Sync from sheet',makeInv:'Create invoice',iNo:'Invoice no.',iDate:'Invoice date',
+  iMonth:'Billing month',iPeriod:'Billing period (fortnight)',iPurpose:'Purpose',iCustFilter:'Only this customer / offer (optional)',
+  iFrom:'Billed by (contractor / your firm)',iTo:'Billed to',iGst:'GST %',iPo:'PO / reference',
+  previewInv:'Preview & print invoice',autoNo:'Auto-generated from the billing period.',
+  editNo:'Edit',prefix:'Invoice number prefix',
+  settings:'Google Sheet connection',sheetUrl:'Apps Script web app URL (/exec)',
+  sheetHelp:'Paste the /exec URL from your Apps Script deployment. Entries sync automatically; offline entries queue and sync later.',
+  company:'Company name on printouts',connect:'Save & connect',close:'Close',
+  saved:'Entry saved',updated:'Entry updated',deleted:'Entry deleted',
+  noData:'No entries yet. Log today\u2019s labour above.',
+  edit:'Edit',del:'Delete',needDate:'Pick a date',needName:'Add an offer no. or customer',
+  needNum:'Enter no. of labours',
+  connected:'SHEET CONNECTED',offline:'OFFLINE · LOCAL ONLY',pending:'PENDING',synced:'SYNCED',
+  listening:'Listening…',noMic:'Voice input not supported here — use Chrome',
+  nothing:'Nothing to export',translating:'Translating…',trDone:'Translated',
+  needSheet:'Connect the Google Sheet first (⚙)',regTitle:'LABOUR REGISTER',invTitle:'TAX INVOICE',
+  cDate:'Date',cOffer:'Offer No',cCust:'Customer',cLoc:'Location',cLab:'Labours',cPur:'Purpose',
+  cRate:'Rate',cAmt:'Amount',cRem:'Remarks',total:'TOTAL',words:'Amount in words',
+  prepared:'Prepared by',verified:'Verified by',approved:'Approved by',
+  received:'Receiver signature',billedBy:'Billed by',billedTo:'Billed to',period:'Period',
+  subtotal:'Subtotal',gst:'GST',grand:'Grand total',pulled:'Synced from sheet',
+  syncFail:'Sheet not reachable — saved on this device',printNow:'Print'},
+ hi:{appName:'लेबर लॉग',tabEntry:'एंट्री',tabRecords:'रिकॉर्ड',tabInvoice:'बिल',
+  newEntry:'नई एंट्री',editEntry:'एंट्री में बदलाव',lDate:'तारीख',lOffer:'ऑफर नं.',lCust:'ग्राहक का नाम',
+  lLoc:'साइट / लोकेशन',lNum:'लेबर की संख्या',lRate:'प्रति लेबर रेट (₹)',lPurpose:'काम',lNote:'टिप्पणी',
+  unloading:'अनलोडिंग',shifting:'शिफ्टिंग',lReason:'कारण',work:'काम',rework:'री-वर्क',
+  bothReason:'काम + री-वर्क',allPeriods:'सभी अवधि',h1:'1–15',h2:'16–अंत',cReason:'कारण',
+  saveEntry:'एंट्री सेव करें',updateEntry:'अपडेट करें',
+  cancelEdit:'रद्द करें',dictHint:'हिंदी या अंग्रेज़ी में बोलें — माइक दबाएँ।',translate:'अंग्रेज़ी में बदलें',
+  sEntries:'एंट्री',sLabour:'लेबर',sAmount:'रकम',search:'ऑफर, ग्राहक, लोकेशन खोजें',
+  bothPurpose:'दोनों',allMonths:'सभी महीने',exportCsv:'CSV एक्सपोर्ट',printReg:'रजिस्टर प्रिंट',
+  pullSheet:'शीट से सिंक',makeInv:'बिल बनाएँ',iNo:'बिल नं.',iDate:'बिल की तारीख',
+  iMonth:'बिलिंग महीना',iPeriod:'बिलिंग अवधि (पखवाड़ा)',iPurpose:'काम',iCustFilter:'सिर्फ यह ग्राहक / ऑफर (वैकल्पिक)',
+  iFrom:'बिल देने वाला (ठेकेदार / फर्म)',iTo:'बिल किसके नाम',iGst:'GST %',iPo:'PO / संदर्भ',
+  previewInv:'बिल देखें और प्रिंट करें',autoNo:'बिलिंग अवधि से अपने आप बनता है।',
+  editNo:'बदलें',prefix:'बिल नंबर का प्रीफिक्स',
+  settings:'गूगल शीट कनेक्शन',sheetUrl:'Apps Script वेब ऐप URL (/exec)',
+  sheetHelp:'Apps Script डिप्लॉयमेंट का /exec URL पेस्ट करें। एंट्री अपने आप सिंक होंगी; ऑफलाइन एंट्री बाद में सिंक हो जाएँगी।',
+  company:'प्रिंट पर कंपनी का नाम',connect:'सेव और कनेक्ट',close:'बंद करें',
+  saved:'एंट्री सेव हो गई',updated:'एंट्री अपडेट हो गई',deleted:'एंट्री हटा दी गई',
+  noData:'अभी कोई एंट्री नहीं। ऊपर आज की लेबर दर्ज करें।',
+  edit:'बदलें',del:'हटाएँ',needDate:'तारीख चुनें',needName:'ऑफर नं. या ग्राहक भरें',
+  needNum:'लेबर की संख्या भरें',
+  connected:'शीट कनेक्ट है',offline:'ऑफलाइन · सिर्फ इस डिवाइस में',pending:'बाकी',synced:'सिंक',
+  listening:'सुन रहा हूँ…',noMic:'यहाँ वॉइस सपोर्ट नहीं है — क्रोम इस्तेमाल करें',
+  nothing:'एक्सपोर्ट के लिए कुछ नहीं',translating:'अनुवाद हो रहा है…',trDone:'अनुवाद हो गया',
+  needSheet:'पहले गूगल शीट कनेक्ट करें (⚙)',regTitle:'लेबर रजिस्टर',invTitle:'बिल / इनवॉइस',
+  cDate:'तारीख',cOffer:'ऑफर नं.',cCust:'ग्राहक',cLoc:'लोकेशन',cLab:'लेबर',cPur:'काम',
+  cRate:'रेट',cAmt:'रकम',cRem:'टिप्पणी',total:'कुल',words:'शब्दों में',
+  prepared:'तैयार किया',verified:'जाँच की',approved:'स्वीकृत',
+  received:'प्राप्तकर्ता के हस्ताक्षर',billedBy:'बिल देने वाला',billedTo:'बिल किसके नाम',period:'अवधि',
+  subtotal:'उप-योग',gst:'जीएसटी',grand:'कुल रकम',pulled:'शीट से सिंक हो गया',
+  syncFail:'शीट नहीं मिली — डिवाइस में सेव है',printNow:'प्रिंट करें'}
+};
+let lang = localStorage.getItem('ll_lang') || 'en';
+const t = k => (T[lang][k] || T.en[k] || k);
+
+/* ================= state ================= */
+const KEY='lingel_labour_v2', SET='lingel_labour_set';
+let entries=[], editId=null, purpose='Unloading', reason='Work';
+let cfg={url:'',co:'Lingel Windows & Doors Technologies Pvt. Ltd.',prefix:'LBR',used:[]};
+
+const $=id=>document.getElementById(id);
+const money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2});
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function toast(m){const x=$('toast');x.textContent=m;x.classList.add('on');setTimeout(()=>x.classList.remove('on'),2000);}
+function fmtDate(d){const x=new Date(d+'T00:00:00');
+  return x.toLocaleDateString(lang==='hi'?'hi-IN':'en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}
+function monthLabel(m){const d=new Date(m+'-01T00:00:00');
+  return d.toLocaleDateString(lang==='hi'?'hi-IN':'en-IN',{month:'short',year:'numeric'});}
+/* fortnightly billing period: A = 1–15, B = 16–end */
+function periodOf(date){const d=String(date);return d.slice(0,7)+(parseInt(d.slice(8,10),10)<=15?'-A':'-B');}
+function periodLabel(p){return monthLabel(p.slice(0,7))+' · '+(p.slice(-1)==='A'?t('h1'):t('h2'));}
+
+async function store(k,v){try{if(window.storage){await window.storage.set(k,v);}else localStorage.setItem(k,v);}catch(e){}}
+async function grab(k){try{if(window.storage){const r=await window.storage.get(k);return r?r.value:null;}return localStorage.getItem(k);}catch(e){return null;}}
+async function persist(){await store(KEY,JSON.stringify(entries));}
+
+/* ================= sheet backend ================= */
+async function api(payload){
+  if(!cfg.url) throw new Error('no url');
+  const r=await fetch(cfg.url,{method:'POST',redirect:'follow',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},   /* simple request → no CORS preflight */
+    body:JSON.stringify(payload)});
+  return await r.json();
+}
+function syncLine(){
+  const pend=entries.filter(e=>!e.synced).length;
+  $('syncLine').textContent = cfg.url ? t('connected')+(pend?' · '+pend+' '+t('pending'):'') : t('offline');
+}
+async function pushOne(e){
+  if(!cfg.url) return;
+  try{const r=await api({action:'save',entry:e});
+    if(r.ok){e.synced=true;await persist();syncLine();render();}}catch(err){}
+}
+async function pushPending(){
+  const pend=entries.filter(e=>!e.synced);
+  if(!cfg.url||!pend.length) return;
+  try{const r=await api({action:'save',entries:pend});
+    if(r.ok){pend.forEach(e=>e.synced=true);await persist();syncLine();render();}}catch(e){}
+}
+$('pull').onclick=async()=>{
+  if(!cfg.url){toast(t('needSheet'));return;}
+  try{
+    const r=await api({action:'list'});
+    if(r.ok){
+      const byId={};
+      entries.forEach(e=>byId[e.id]=e);
+      r.entries.forEach(e=>{e.synced=true;byId[e.id]=e;});
+      entries=Object.values(byId);
+      await persist();monthOptions();render();syncLine();toast(t('pulled'));
+    } else toast(t('syncFail'));
+  }catch(e){toast(t('syncFail'));}
+};
+
+/* ================= dictation ================= */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let rec=null;
+document.querySelectorAll('.mic').forEach(b=>{
+  b.onclick=()=>{
+    if(!SR){toast(t('noMic'));return;}
+    if(rec){rec.stop();return;}
+    const target=$(b.dataset.mic);
+    rec=new SR();
+    rec.lang = lang==='hi' ? 'hi-IN' : 'en-IN';
+    rec.interimResults=true; rec.continuous=false;
+    const base=target.value?target.value+' ':'';
+    rec.onstart=()=>{b.classList.add('rec');toast(t('listening'));};
+    rec.onresult=ev=>{let s='';for(let i=0;i<ev.results.length;i++)s+=ev.results[i][0].transcript;target.value=base+s;};
+    rec.onerror=()=>toast(t('noMic'));
+    rec.onend=()=>{b.classList.remove('rec');rec=null;};
+    rec.start();
+  };
+});
+$('trBtn').onclick=async()=>{
+  if(!cfg.url){toast(t('needSheet'));return;}
+  const ids=['f_cust','f_loc','f_note'];
+  let did=false; toast(t('translating'));
+  for(const id of ids){
+    const v=$(id).value.trim();
+    if(!v||!/[\u0900-\u097F]/.test(v)) continue;      /* only if Devanagari present */
+    try{const r=await api({action:'translate',text:v,from:'hi',to:'en'});
+      if(r.ok&&r.text){$(id).value=r.text;did=true;}}catch(e){}
+  }
+  toast(did?t('trDone'):t('nothing'));
+};
+
+/* ================= form ================= */
+$('pUnload').onclick=()=>setPurpose('Unloading');
+$('pShift').onclick=()=>setPurpose('Shifting');
+function setPurpose(p){purpose=p;
+  $('pUnload').setAttribute('aria-pressed',p==='Unloading');
+  $('pShift').setAttribute('aria-pressed',p==='Shifting');}
+$('rWork').onclick=()=>setReason('Work');
+$('rRework').onclick=()=>setReason('Rework');
+function setReason(r){reason=r;
+  $('rWork').setAttribute('aria-pressed',r==='Work');
+  $('rRework').setAttribute('aria-pressed',r==='Rework');}
+
+$('save').onclick=async()=>{
+  const e={
+    id: editId || Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+    date:$('f_date').value, offer:$('f_offer').value.trim(), customer:$('f_cust').value.trim(),
+    location:$('f_loc').value.trim(), labours:parseInt($('f_num').value,10)||0,
+    rate:parseFloat($('f_rate').value)||0, purpose:purpose, reason:reason,
+    note:$('f_note').value.trim(), synced:false
+  };
+  e.period = e.date ? periodOf(e.date) : '';
+  if(!e.date){toast(t('needDate'));return;}
+  if(!e.customer&&!e.offer){toast(t('needName'));return;}
+  if(e.labours<1){toast(t('needNum'));return;}
+  if(editId){entries=entries.map(x=>x.id===editId?e:x);toast(t('updated'));}
+  else{entries.push(e);toast(t('saved'));}
+  await persist(); resetForm(); monthOptions(); render(); syncLine(); pushOne(e);
+};
+$('cancel').onclick=resetForm;
+
+function resetForm(){
+  editId=null;
+  $('formTitle').textContent=t('newEntry');
+  $('save').textContent=t('saveEntry');
+  $('cancel').classList.add('hide');
+  $('f_date').value=new Date().toISOString().slice(0,10);
+  ['f_offer','f_cust','f_loc','f_note'].forEach(i=>$(i).value='');
+  $('f_num').value=2; $('f_rate').value=800; setPurpose('Unloading'); setReason('Work');
+}
+function edit(id){
+  const e=entries.find(x=>x.id===id); if(!e)return;
+  editId=id; tab('entry');
+  $('formTitle').textContent=t('editEntry');
+  $('save').textContent=t('updateEntry');
+  $('cancel').classList.remove('hide');
+  $('f_date').value=e.date; $('f_offer').value=e.offer||''; $('f_cust').value=e.customer||'';
+  $('f_loc').value=e.location||''; $('f_num').value=e.labours; $('f_rate').value=e.rate;
+  $('f_note').value=e.note||''; setPurpose(e.purpose||'Unloading'); setReason(e.reason||'Work');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+async function del(id){
+  if(!confirm(t('del')+' ?'))return;
+  entries=entries.filter(x=>x.id!==id);
+  await persist(); monthOptions(); render(); syncLine(); toast(t('deleted'));
+  if(cfg.url){try{await api({action:'delete',id});}catch(e){}}
+}
+window.edit=edit; window.del=del;
+
+/* ================= tabs ================= */
+function tab(name){
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===name));
+  ['entry','records','invoice'].forEach(s=>$('tab-'+s).classList.toggle('hide',s!==name));
+  window.scrollTo({top:0});
+}
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
+
+/* ================= records ================= */
+function filtered(){
+  const q=$('q').value.toLowerCase().trim(), pd=$('fMonth').value,
+        p=$('fPurpose').value, rs=$('fReason').value;
+  return entries.filter(e=>{
+    if(p&&e.purpose!==p) return false;
+    if(rs&&(e.reason||'Work')!==rs) return false;
+    if(pd&&periodOf(e.date)!==pd) return false;
+    if(q&&!((e.offer+' '+e.customer+' '+e.location).toLowerCase().includes(q))) return false;
+    return true;
+  }).sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.id).localeCompare(String(a.id)));
+}
+function periodList(){return [...new Set(entries.map(e=>periodOf(e.date)))].filter(Boolean).sort().reverse();}
+function monthOptions(){
+  const ps=periodList(), f=$('fMonth'), cf=f.value;
+  f.innerHTML=`<option value="">${t('allPeriods')}</option>`+
+    ps.map(p=>`<option value="${p}">${periodLabel(p)}</option>`).join('');
+  f.value=cf;
+  const i=$('i_month'), ci=i.value;
+  i.innerHTML=ps.map(p=>`<option value="${p}">${periodLabel(p)}</option>`).join('');
+  i.value=ci||ps[0]||'';
+  if(typeof refreshInvNo==='function') refreshInvNo();
+}
+function render(){
+  const rows=filtered();
+  $('sEntries').textContent=rows.length;
+  $('sLabour').textContent=rows.reduce((s,e)=>s+Number(e.labours||0),0);
+  $('sCost').textContent=money(rows.reduce((s,e)=>s+e.labours*e.rate,0));
+  const list=$('list');
+  if(!rows.length){list.innerHTML=`<div class="empty">${t('noData')}</div>`;return;}
+  const byDay={}; rows.forEach(e=>{(byDay[e.date]=byDay[e.date]||[]).push(e);});
+  list.innerHTML=Object.keys(byDay).sort().reverse().map(d=>{
+    const g=byDay[d],lab=g.reduce((s,e)=>s+Number(e.labours||0),0),amt=g.reduce((s,e)=>s+e.labours*e.rate,0);
+    return `<div class="daygroup">
+      <div class="dayhead"><b>${fmtDate(d)}</b><span>${lab} ${t('sLabour')} · ${money(amt)}</span></div>
+      ${g.map(e=>`<div class="row ${e.purpose==='Shifting'?'shift':''}">
+        <div class="r1"><span class="offer">${esc(e.offer)||'—'}</span><span class="cost">${money(e.labours*e.rate)}</span></div>
+        <div class="cust">${esc(e.customer)||'—'}</div>
+        <div class="meta">
+          <span class="tag">${t(e.purpose==='Shifting'?'shifting':'unloading')}</span>
+          <span class="tag ${(e.reason||'Work')==='Rework'?'rw':''}">${t((e.reason||'Work')==='Rework'?'rework':'work')}</span>
+          <span class="tag ${e.synced?'sync':'pend'}">${e.synced?t('synced'):t('pending')}</span>
+          <span>${e.labours} × ${money(e.rate)}</span>
+          ${e.location?`<span>· ${esc(e.location)}</span>`:''}
+        </div>
+        ${e.note?`<div class="note">${esc(e.note)}</div>`:''}
+        <div class="acts">
+          <button onclick="edit('${e.id}')">${t('edit')}</button>
+          <button class="del" onclick="del('${e.id}')">${t('del')}</button>
+        </div></div>`).join('')}
+    </div>`;
+  }).join('');
+}
+$('q').oninput=render; $('fMonth').onchange=render; $('fPurpose').onchange=render; $('fReason').onchange=render;
+
+$('csv').onclick=()=>{
+  const rows=filtered(); if(!rows.length){toast(t('nothing'));return;}
+  const head=['Date','Billing Period','Offer No','Customer','Location','No of Labours','Purpose','Reason','Rate','Amount','Remarks'];
+  const body=rows.map(e=>[e.date,periodOf(e.date),e.offer,e.customer,e.location,e.labours,e.purpose,
+    e.reason||'Work',e.rate,e.labours*e.rate,e.note||'']);
+  const csv=[head,...body].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));
+  a.download='labour-log-'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+};
+
+/* ================= documents ================= */
+function docHead(title,meta){
+  return `<div class="ph">
+    <div><div class="co">${esc(cfg.co)}</div><div class="cosub">${t('appName')} · ${t('unloading')} / ${t('shifting')}</div></div>
+    <div><div class="doct">${title}</div><div class="docm">${meta}</div></div></div>`;
+}
+function docTable(rows,showRem){
+  const lab=rows.reduce((s,e)=>s+Number(e.labours||0),0);
+  const amt=rows.reduce((s,e)=>s+e.labours*e.rate,0);
+  return `<table><thead><tr>
+    <th class="n">#</th><th>${t('cDate')}</th><th>${t('cOffer')}</th><th>${t('cCust')}</th><th>${t('cLoc')}</th>
+    <th>${t('cPur')}</th><th>${t('cReason')}</th><th class="n">${t('cLab')}</th><th class="n">${t('cRate')}</th>
+    <th class="n">${t('cAmt')}</th>${showRem?`<th>${t('cRem')}</th>`:''}</tr></thead><tbody>
+    ${rows.map((e,i)=>`<tr>
+      <td class="n">${i+1}</td><td>${esc(e.date)}</td><td>${esc(e.offer)}</td><td>${esc(e.customer)}</td>
+      <td>${esc(e.location)}</td><td>${t(e.purpose==='Shifting'?'shifting':'unloading')}</td>
+      <td>${t((e.reason||'Work')==='Rework'?'rework':'work')}</td>
+      <td class="n">${e.labours}</td><td class="n">${Number(e.rate).toFixed(0)}</td>
+      <td class="n">${(e.labours*e.rate).toFixed(0)}</td>${showRem?`<td>${esc(e.note)}</td>`:''}</tr>`).join('')}
+    <tr class="tot"><td colspan="7">${t('total')}</td><td class="n">${lab}</td><td></td>
+      <td class="n">${money(amt)}</td>${showRem?'<td></td>':''}</tr></tbody></table>`;
+}
+function words(n){
+  n=Math.round(n||0);
+  const a=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen',
+    'Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  const b=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  const two=x=>x<20?a[x]:b[Math.floor(x/10)]+(x%10?' '+a[x%10]:'');
+  const three=x=>(x>=100?a[Math.floor(x/100)]+' Hundred'+(x%100?' ':''):'')+(x%100?two(x%100):'');
+  if(!n) return 'Zero Rupees Only';
+  let s='',cr=Math.floor(n/10000000);n%=10000000;
+  const lk=Math.floor(n/100000);n%=100000;
+  const th=Math.floor(n/1000);n%=1000;
+  if(cr)s+=three(cr)+' Crore ';
+  if(lk)s+=three(lk)+' Lakh ';
+  if(th)s+=three(th)+' Thousand ';
+  if(n)s+=three(n);
+  return s.trim()+' Rupees Only';
+}
+function printDoc(html){ $('printArea').innerHTML=`<div class="paper">${html}</div>`; window.print(); }
+
+$('printReg').onclick=()=>{
+  const rows=filtered().slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  if(!rows.length){toast(t('nothing'));return;}
+  const period=$('fMonth').value ? periodLabel($('fMonth').value)
+    : (rows.length? rows[0].date+' → '+rows[rows.length-1].date : '—');
+  const rw=rows.filter(e=>(e.reason||'Work')==='Rework');
+  const rwAmt=rw.reduce((s2,e)=>s2+e.labours*e.rate,0);
+  printDoc(
+    docHead(t('regTitle'), `${t('period')}: ${period}<br>${new Date().toLocaleDateString('en-IN')}`)
+    + docTable(rows,true)
+    + `<div class="sig"><div>${t('prepared')}</div><div>${t('verified')}</div><div>${t('approved')}</div></div>`
+    + `<div class="fnote">${rows.length} entries · ${t('rework')}: ${rw.length} (${money(rwAmt)}) · Labour Log</div>`);
+};
+
+/* ================= invoice ================= */
+/* LBR/2026/07A  → prefix / year / month + fortnight.
+   A second invoice raised in the same fortnight becomes …07A-2, then -3. */
+function autoInvNo(period){
+  if(!period) return '';
+  const base=(cfg.prefix||'LBR')+'/'+period.slice(0,4)+'/'+period.slice(5,7)+period.slice(-1);
+  const used=cfg.used||[];
+  if(!used.includes(base)) return base;
+  let n=2;
+  while(used.includes(base+'-'+n)) n++;
+  return base+'-'+n;
+}
+function refreshInvNo(){
+  if($('i_no').dataset.manual==='1') return;
+  $('i_no').value=autoInvNo($('i_month').value);
+}
+async function markUsed(no){
+  if(!no) return;
+  cfg.used=cfg.used||[];
+  if(!cfg.used.includes(no)){ cfg.used.push(no); await store(SET,JSON.stringify(cfg)); }
+}
+$('i_month').onchange=refreshInvNo;
+$('unlockNo').onclick=()=>{
+  const f=$('i_no');
+  f.readOnly=false; f.dataset.manual='1'; f.focus(); f.select();
+};
+
+function invRows(){
+  const pd=$('i_month').value, p=$('i_purpose').value,
+        rs=$('i_reason').value, f=$('i_filter').value.toLowerCase().trim();
+  return entries.filter(e=>{
+    if(pd&&periodOf(e.date)!==pd) return false;
+    if(p&&e.purpose!==p) return false;
+    if(rs&&(e.reason||'Work')!==rs) return false;
+    if(f&&!((e.offer+' '+e.customer).toLowerCase().includes(f))) return false;
+    return true;
+  }).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+}
+function buildInvoice(){
+  const rows=invRows();
+  if(!rows.length) return null;
+  const sub=rows.reduce((s2,e)=>s2+e.labours*e.rate,0);
+  const gp=parseFloat($('i_gst').value)||0, gst=sub*gp/100, grand=sub+gst;
+  return docHead(t('invTitle'),
+      `${t('iNo')}: ${esc($('i_no').value)||'—'}<br>${t('iDate')}: ${$('i_date').value||new Date().toISOString().slice(0,10)}`)
+    + `<div class="binfo">
+        <div style="flex:1"><b>${t('billedBy')}</b>${esc($('i_from').value)||'—'}</div>
+        <div style="flex:1"><b>${t('billedTo')}</b>${esc($('i_to').value)||'—'}
+          ${$('i_po').value?`<br><br><b>${t('iPo')}</b>${esc($('i_po').value)}`:''}</div>
+        <div style="flex:0 0 auto;text-align:right"><b>${t('period')}</b>${$('i_month').value?periodLabel($('i_month').value):'—'}</div>
+      </div>`
+    + docTable(rows,false)
+    + `<table class="totals">
+        <tr><td>${t('subtotal')}</td><td class="n">${money(sub)}</td></tr>
+        ${gp?`<tr><td>${t('gst')} ${gp}%</td><td class="n">${money(gst)}</td></tr>`:''}
+        <tr class="tot"><td>${t('grand')}</td><td class="n">${money(grand)}</td></tr></table>`
+    + `<div class="words"><b>${t('words')}:</b> ${words(grand)}</div>`
+    + `<div class="sig"><div>${t('prepared')}</div><div>${t('approved')}</div><div>${t('received')}</div></div>`;
+}
+$('genInv').onclick=()=>{
+  const html=buildInvoice();
+  if(!html){toast(t('nothing'));return;}
+  $('invPreview').innerHTML=`<div class="paper" id="invLive">${html}</div>
+    <button class="btn" id="printInv">${t('printNow')}</button>`;
+  $('printInv').onclick=async()=>{
+    $('printArea').innerHTML=`<div class="paper">${buildInvoice()}</div>`;
+    await markUsed($('i_no').value.trim());
+    window.print();
+    $('i_no').readOnly=true; delete $('i_no').dataset.manual; refreshInvNo();
+  };
+  $('invPreview').scrollIntoView({behavior:'smooth'});
+};
+
+/* ================= settings + language ================= */
+$('gear').onclick=()=>{$('sheetUrl').value=cfg.url;$('coName').value=cfg.co;
+  $('coPrefix').value=cfg.prefix||'LBR';$('setModal').classList.add('on');};
+$('closeSet').onclick=()=>$('setModal').classList.remove('on');
+$('saveSet').onclick=async()=>{
+  cfg.url=$('sheetUrl').value.trim();
+  cfg.co=$('coName').value.trim()||cfg.co;
+  cfg.prefix=($('coPrefix').value.trim()||'LBR').replace(/\/+$/,'');
+  await store(SET,JSON.stringify(cfg));
+  refreshInvNo();
+  $('setModal').classList.remove('on'); syncLine();
+  if(cfg.url){
+    try{const r=await api({action:'ping'}); toast(r.ok?t('connected'):t('syncFail')); if(r.ok) pushPending();}
+    catch(e){toast(t('syncFail'));}
+  }
+};
+function applyLang(){
+  document.documentElement.lang=lang;
+  document.querySelectorAll('[data-t]').forEach(el=>el.textContent=t(el.dataset.t));
+  document.querySelectorAll('[data-tp]').forEach(el=>el.placeholder=t(el.dataset.tp));
+  $('langBtn').textContent = lang==='en' ? 'हिंदी' : 'EN';
+  $('f_cust').placeholder = lang==='en' ? 'Mr. Gurmeet Khurana' : 'श्री गुरमीत खुराना';
+  $('f_loc').placeholder  = lang==='en' ? 'B-395, NFC, Delhi'   : 'बी-395, एनएफसी, दिल्ली';
+  $('f_note').placeholder = lang==='en' ? 'Contractor, vehicle, floor…' : 'ठेकेदार, गाड़ी, फ्लोर…';
+  $('formTitle').textContent = editId ? t('editEntry') : t('newEntry');
+  $('save').textContent = editId ? t('updateEntry') : t('saveEntry');
+  syncLine(); monthOptions(); render();
+}
+$('langBtn').onclick=()=>{lang = lang==='en'?'hi':'en'; localStorage.setItem('ll_lang',lang); applyLang();};
+
+/* ================= boot ================= */
+(async()=>{
+  try{cfg=Object.assign(cfg,JSON.parse(await grab(SET)||'{}'));}catch(e){}
+  try{entries=JSON.parse(await grab(KEY)||'[]');}catch(e){entries=[];}
+  $('coName').value=cfg.co;
+  $('i_date').value=new Date().toISOString().slice(0,10);
+  $('coPrefix').value=cfg.prefix||'LBR';
+  resetForm(); applyLang(); refreshInvNo();
+  if(cfg.url) pushPending();
+  window.addEventListener('online',pushPending);
+})();
+</script>
+</body>
+</html>
