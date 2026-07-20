@@ -296,6 +296,17 @@
     <input id="coName">
     <label style="margin-top:10px" data-t="prefix">Invoice number prefix</label>
     <input id="coPrefix" placeholder="LBR">
+
+    <label style="margin-top:14px;color:var(--hi);font-weight:800" data-t="bizHead">Your billing details (one-time)</label>
+    <div class="grid" style="margin-top:2px">
+      <div><label data-t="fGstin">GSTIN</label><input id="bGstin" autocomplete="off" style="text-transform:uppercase"></div>
+      <div><label data-t="fPan">PAN</label><input id="bPan" maxlength="10" autocomplete="off" style="text-transform:uppercase"></div>
+      <div class="full"><label data-t="fAcName">Account holder name</label><input id="bAcName" autocomplete="off"></div>
+      <div><label data-t="fBankName">Bank name</label><input id="bBankName" autocomplete="off"></div>
+      <div><label data-t="fIfsc">IFSC code</label><input id="bIfsc" autocomplete="off" style="text-transform:uppercase"></div>
+      <div class="full"><label data-t="fAcNo">Account number</label><input id="bAcNo" inputmode="numeric" autocomplete="off"></div>
+    </div>
+
     <button class="btn" id="saveSet" data-t="connect">Save &amp; connect</button>
     <button class="btn ghost" id="closeSet" data-t="close">Close</button>
   </div>
@@ -321,7 +332,7 @@ const T={
   iFrom:'Billed by (contractor / your firm)',iTo:'Billed to',iGst:'GST %',iPo:'PO / reference',
   previewInv:'Preview & print invoice',autoNo:'Auto-generated from the billing period.',
   editNo:'Edit',prefix:'Invoice number prefix',
-  settings:'Google Sheet connection',sheetUrl:'Apps Script web app URL (/exec)',
+  settings:'Settings',sheetUrl:'Apps Script web app URL (/exec)',
   sheetHelp:'Paste the /exec URL from your Apps Script deployment. Entries sync automatically; offline entries queue and sync later.',
   company:'Company name on printouts',connect:'Save & connect',close:'Close',
   saved:'Entry saved',updated:'Entry updated',deleted:'Entry deleted',
@@ -337,7 +348,10 @@ const T={
   prepared:'Prepared by',verified:'Verified by',approved:'Approved by',
   received:'Receiver signature',billedBy:'Billed by',billedTo:'Billed to',period:'Period',
   subtotal:'Subtotal',gst:'GST',grand:'Grand total',pulled:'Synced from sheet',
-  syncFail:'Sheet not reachable — saved on this device',printNow:'Print'},
+  syncFail:'Sheet not reachable — saved on this device',printNow:'Print',
+  bizHead:'Your billing details (one-time)',fGstin:'GSTIN',fPan:'PAN',fAcName:'Account holder name',
+  fBankName:'Bank name',fAcNo:'Account number',fIfsc:'IFSC code',bankDetails:'Bank details',
+  lAcNo:'A/C No.',lIfsc:'IFSC'},
  hi:{appName:'लेबर लॉग',tabEntry:'एंट्री',tabRecords:'रिकॉर्ड',tabInvoice:'बिल',
   newEntry:'नई एंट्री',editEntry:'एंट्री में बदलाव',lDate:'तारीख',lOffer:'ऑफर नं.',lCust:'ग्राहक का नाम',
   lLoc:'साइट / लोकेशन',lNum:'लेबर की संख्या',lRate:'प्रति लेबर रेट (₹)',lPurpose:'काम',lNote:'टिप्पणी',
@@ -352,7 +366,7 @@ const T={
   iFrom:'बिल देने वाला (ठेकेदार / फर्म)',iTo:'बिल किसके नाम',iGst:'GST %',iPo:'PO / संदर्भ',
   previewInv:'बिल देखें और प्रिंट करें',autoNo:'बिलिंग अवधि से अपने आप बनता है।',
   editNo:'बदलें',prefix:'बिल नंबर का प्रीफिक्स',
-  settings:'गूगल शीट कनेक्शन',sheetUrl:'Apps Script वेब ऐप URL (/exec)',
+  settings:'सेटिंग्स',sheetUrl:'Apps Script वेब ऐप URL (/exec)',
   sheetHelp:'Apps Script डिप्लॉयमेंट का /exec URL पेस्ट करें। एंट्री अपने आप सिंक होंगी; ऑफलाइन एंट्री बाद में सिंक हो जाएँगी।',
   company:'प्रिंट पर कंपनी का नाम',connect:'सेव और कनेक्ट',close:'बंद करें',
   saved:'एंट्री सेव हो गई',updated:'एंट्री अपडेट हो गई',deleted:'एंट्री हटा दी गई',
@@ -368,7 +382,10 @@ const T={
   prepared:'तैयार किया',verified:'जाँच की',approved:'स्वीकृत',
   received:'प्राप्तकर्ता के हस्ताक्षर',billedBy:'बिल देने वाला',billedTo:'बिल किसके नाम',period:'अवधि',
   subtotal:'उप-योग',gst:'जीएसटी',grand:'कुल रकम',pulled:'शीट से सिंक हो गया',
-  syncFail:'शीट नहीं मिली — डिवाइस में सेव है',printNow:'प्रिंट करें'}
+  syncFail:'शीट नहीं मिली — डिवाइस में सेव है',printNow:'प्रिंट करें',
+  bizHead:'आपकी बिलिंग जानकारी (एक बार)',fGstin:'GSTIN',fPan:'PAN',fAcName:'खाताधारक का नाम',
+  fBankName:'बैंक का नाम',fAcNo:'खाता संख्या',fIfsc:'IFSC कोड',bankDetails:'बैंक विवरण',
+  lAcNo:'खाता सं.',lIfsc:'IFSC'}
 };
 let lang = localStorage.getItem('ll_lang') || 'en';
 const t = k => (T[lang][k] || T.en[k] || k);
@@ -376,7 +393,8 @@ const t = k => (T[lang][k] || T.en[k] || k);
 /* ================= state ================= */
 const KEY='lingel_labour_v2', SET='lingel_labour_set';
 let entries=[], editId=null, purpose='Unloading', reason='Work';
-let cfg={url:'',co:'Lingel Windows & Doors Technologies Pvt. Ltd.',prefix:'LBR',used:[]};
+let cfg={url:'',co:'Lingel Windows & Doors Technologies Pvt. Ltd.',prefix:'LBR',used:[],
+  gstin:'',pan:'',acName:'',bankName:'',acNo:'',ifsc:''};
 
 const $=id=>document.getElementById(id);
 const money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2});
@@ -693,10 +711,16 @@ function buildInvoice(){
   if(!rows.length) return null;
   const sub=rows.reduce((s2,e)=>s2+e.labours*e.rate,0);
   const gp=parseFloat($('i_gst').value)||0, gst=sub*gp/100, grand=sub+gst;
+  const bankLine=(cfg.acName||cfg.bankName||cfg.acNo||cfg.ifsc)
+    ? `<div class="words" style="margin-top:6px"><b>${t('bankDetails')}:</b> `
+      + [cfg.acName?esc(cfg.acName):'', cfg.bankName?esc(cfg.bankName):'',
+         cfg.acNo?(t('lAcNo')+' '+esc(cfg.acNo)):'', cfg.ifsc?(t('lIfsc')+' '+esc(cfg.ifsc)):'']
+        .filter(Boolean).join(' · ') + `</div>`
+    : '';
   return docHead(t('invTitle'),
       `${t('iNo')}: ${esc($('i_no').value)||'—'}<br>${t('iDate')}: ${$('i_date').value||new Date().toISOString().slice(0,10)}`)
     + `<div class="binfo">
-        <div style="flex:1"><b>${t('billedBy')}</b>${esc($('i_from').value)||'—'}</div>
+        <div style="flex:1"><b>${t('billedBy')}</b>${esc($('i_from').value)||esc(cfg.co)}${cfg.gstin?`<br>${t('fGstin')}: ${esc(cfg.gstin)}`:''}${cfg.pan?`<br>${t('fPan')}: ${esc(cfg.pan)}`:''}</div>
         <div style="flex:1"><b>${t('billedTo')}</b>${esc($('i_to').value)||'—'}
           ${$('i_po').value?`<br><br><b>${t('iPo')}</b>${esc($('i_po').value)}`:''}</div>
         <div style="flex:0 0 auto;text-align:right"><b>${t('period')}</b>${$('i_month').value?periodLabel($('i_month').value):'—'}</div>
@@ -707,6 +731,7 @@ function buildInvoice(){
         ${gp?`<tr><td>${t('gst')} ${gp}%</td><td class="n">${money(gst)}</td></tr>`:''}
         <tr class="tot"><td>${t('grand')}</td><td class="n">${money(grand)}</td></tr></table>`
     + `<div class="words"><b>${t('words')}:</b> ${words(grand)}</div>`
+    + bankLine
     + `<div class="sig"><div>${t('prepared')}</div><div>${t('approved')}</div><div>${t('received')}</div></div>`;
 }
 $('genInv').onclick=()=>{
@@ -724,13 +749,25 @@ $('genInv').onclick=()=>{
 };
 
 /* ================= settings + language ================= */
-$('gear').onclick=()=>{$('sheetUrl').value=cfg.url;$('coName').value=cfg.co;
-  $('coPrefix').value=cfg.prefix||'LBR';$('setModal').classList.add('on');};
+function openSettings(){
+  $('sheetUrl').value=cfg.url;$('coName').value=cfg.co;$('coPrefix').value=cfg.prefix||'LBR';
+  $('bGstin').value=cfg.gstin||'';$('bPan').value=cfg.pan||'';
+  $('bAcName').value=cfg.acName||'';$('bBankName').value=cfg.bankName||'';
+  $('bAcNo').value=cfg.acNo||'';$('bIfsc').value=cfg.ifsc||'';
+  $('setModal').classList.add('on');
+}
+$('gear').onclick=openSettings;
 $('closeSet').onclick=()=>$('setModal').classList.remove('on');
 $('saveSet').onclick=async()=>{
   cfg.url=$('sheetUrl').value.trim();
   cfg.co=$('coName').value.trim()||cfg.co;
   cfg.prefix=($('coPrefix').value.trim()||'LBR').replace(/\/+$/,'');
+  cfg.gstin=$('bGstin').value.trim().toUpperCase();
+  cfg.pan=$('bPan').value.trim().toUpperCase();
+  cfg.acName=$('bAcName').value.trim();
+  cfg.bankName=$('bBankName').value.trim();
+  cfg.acNo=$('bAcNo').value.trim();
+  cfg.ifsc=$('bIfsc').value.trim().toUpperCase();
   await store(SET,JSON.stringify(cfg));
   refreshInvNo();
   $('setModal').classList.remove('on'); syncLine();
@@ -761,6 +798,9 @@ $('langBtn').onclick=()=>{lang = lang==='en'?'hi':'en'; localStorage.setItem('ll
   $('i_date').value=new Date().toISOString().slice(0,10);
   $('coPrefix').value=cfg.prefix||'LBR';
   resetForm(); applyLang(); refreshInvNo();
+  if(!cfg.gstin && !cfg.pan && !cfg.acNo && !localStorage.getItem('ll_bizsetup')){
+    localStorage.setItem('ll_bizsetup','1'); openSettings();
+  }
   if(cfg.url) pushPending();
   window.addEventListener('online',pushPending);
 })();
