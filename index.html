@@ -312,6 +312,7 @@
     <div class="grid" style="margin-top:2px">
       <div><label data-t="fGstin">GSTIN</label><input id="bGstin" autocomplete="off" style="text-transform:uppercase"></div>
       <div><label data-t="fPan">PAN</label><input id="bPan" maxlength="10" autocomplete="off" style="text-transform:uppercase"></div>
+      <div class="full"><label data-t="fAadhaar">Aadhaar No.</label><input id="bAadhaar" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="XXXX XXXX XXXX"></div>
       <div class="full"><label data-t="fAcName">Account holder name</label><input id="bAcName" autocomplete="off"></div>
       <div><label data-t="fBankName">Bank name</label><input id="bBankName" autocomplete="off"></div>
       <div><label data-t="fIfsc">IFSC code</label><input id="bIfsc" autocomplete="off" style="text-transform:uppercase"></div>
@@ -355,14 +356,14 @@ const T={
   connected:'SHEET CONNECTED',offline:'OFFLINE · LOCAL ONLY',pending:'PENDING',synced:'SYNCED',
   listening:'Listening…',noMic:'Voice input not supported here — use Chrome',
   nothing:'Nothing to export',translating:'Translating…',trDone:'Translated',
-  needSheet:'Connect the Google Sheet first (⚙)',regTitle:'LABOUR REGISTER',invTitle:'TAX INVOICE',
+  needSheet:'Connect the Google Sheet first (⚙)',regTitle:'LABOUR REGISTER',invTitle:'INVOICE',
   cDate:'Date',cOffer:'Offer No',cCust:'Customer',cLoc:'Location',cLab:'Labours',cPur:'Purpose',
   cRate:'Rate',cAmt:'Amount',cRem:'Remarks',total:'TOTAL',words:'Amount in words',
   prepared:'Prepared by',verified:'Verified by',approved:'Approved by',
   received:'Receiver signature',billedBy:'Billed by',billedTo:'Billed to',period:'Period',
   subtotal:'Subtotal',gst:'GST',grand:'Grand total',pulled:'Synced from sheet',
   syncFail:'Sheet not reachable — saved on this device',printNow:'Print',
-  bizHead:'Your billing details (one-time)',fGstin:'GSTIN',fPan:'PAN',fAcName:'Account holder name',
+  bizHead:'Your billing details (one-time)',fGstin:'GSTIN',fPan:'PAN',fAadhaar:'Aadhaar No.',fAcName:'Account holder name',
   fBankName:'Bank name',fAcNo:'Account number',fIfsc:'IFSC code',bankDetails:'Bank details',
   lAcNo:'A/C No.',lIfsc:'IFSC'},
  hi:{appName:'लेबर लॉग',tabEntry:'एंट्री',tabRecords:'रिकॉर्ड',tabInvoice:'बिल',
@@ -398,7 +399,7 @@ const T={
   received:'प्राप्तकर्ता के हस्ताक्षर',billedBy:'बिल देने वाला',billedTo:'बिल किसके नाम',period:'अवधि',
   subtotal:'उप-योग',gst:'जीएसटी',grand:'कुल रकम',pulled:'शीट से सिंक हो गया',
   syncFail:'शीट नहीं मिली — डिवाइस में सेव है',printNow:'प्रिंट करें',
-  bizHead:'आपकी बिलिंग जानकारी (एक बार)',fGstin:'GSTIN',fPan:'PAN',fAcName:'खाताधारक का नाम',
+  bizHead:'आपकी बिलिंग जानकारी (एक बार)',fGstin:'GSTIN',fPan:'PAN',fAadhaar:'आधार नं.',fAcName:'खाताधारक का नाम',
   fBankName:'बैंक का नाम',fAcNo:'खाता संख्या',fIfsc:'IFSC कोड',bankDetails:'बैंक विवरण',
   lAcNo:'खाता सं.',lIfsc:'IFSC'}
 };
@@ -414,7 +415,7 @@ const entryAmt=e=>(Number(e.labours)||0)*(Number(e.rate)||0)+pulleyCost(e);
 const KEY='lingel_labour_v2', SET='lingel_labour_set';
 let entries=[], editId=null, purpose='Unloading', reason='Work';
 let cfg={url:'',co:'Lingel Windows & Doors Technologies Pvt. Ltd.',prefix:'LBR',used:[],
-  gstin:'',pan:'',acName:'',bankName:'',acNo:'',ifsc:''};
+  gstin:'',pan:'',aadhaar:'',acName:'',bankName:'',acNo:'',ifsc:''};
 
 const $=id=>document.getElementById(id);
 const money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2});
@@ -745,10 +746,13 @@ function buildInvoice(){
          cfg.acNo?(t('lAcNo')+' '+esc(cfg.acNo)):'', cfg.ifsc?(t('lIfsc')+' '+esc(cfg.ifsc)):'']
         .filter(Boolean).join(' · ') + `</div>`
     : '';
+  const aadhaarLine = cfg.aadhaar
+    ? `<div class="words" style="margin-top:6px"><b>${t('fAadhaar')}:</b> ${esc(cfg.aadhaar)}</div>`
+    : '';
   return docHead(t('invTitle'),
       `${t('iNo')}: ${esc($('i_no').value)||'—'}<br>${t('iDate')}: ${$('i_date').value||new Date().toISOString().slice(0,10)}`)
     + `<div class="binfo">
-        <div style="flex:1"><b>${t('billedBy')}</b>${esc($('i_from').value)||esc(cfg.co)}${cfg.gstin?`<br>${t('fGstin')}: ${esc(cfg.gstin)}`:''}${cfg.pan?`<br>${t('fPan')}: ${esc(cfg.pan)}`:''}</div>
+        <div style="flex:1"><b>${t('billedBy')}</b>${esc($('i_from').value)||'—'}${cfg.gstin?`<br>${t('fGstin')}: ${esc(cfg.gstin)}`:''}${cfg.pan?`<br>${t('fPan')}: ${esc(cfg.pan)}`:''}</div>
         <div style="flex:1"><b>${t('billedTo')}</b>${esc($('i_to').value)||'—'}
           ${$('i_po').value?`<br><br><b>${t('iPo')}</b>${esc($('i_po').value)}`:''}</div>
         <div style="flex:0 0 auto;text-align:right"><b>${t('period')}</b>${$('i_month').value?periodLabel($('i_month').value):'—'}</div>
@@ -762,6 +766,7 @@ function buildInvoice(){
         <tr class="tot"><td>${t('grand')}</td><td class="n">${money(grand)}</td></tr></table>`
     + `<div class="words"><b>${t('words')}:</b> ${words(grand)}</div>`
     + bankLine
+    + aadhaarLine
     + `<div class="sig"><div>${t('prepared')}</div><div>${t('approved')}</div><div>${t('received')}</div></div>`;
 }
 $('genInv').onclick=()=>{
@@ -781,7 +786,7 @@ $('genInv').onclick=()=>{
 /* ================= settings + language ================= */
 function openSettings(){
   $('sheetUrl').value=cfg.url;$('coName').value=cfg.co;$('coPrefix').value=cfg.prefix||'LBR';
-  $('bGstin').value=cfg.gstin||'';$('bPan').value=cfg.pan||'';
+  $('bGstin').value=cfg.gstin||'';$('bPan').value=cfg.pan||'';$('bAadhaar').value=cfg.aadhaar||'';
   $('bAcName').value=cfg.acName||'';$('bBankName').value=cfg.bankName||'';
   $('bAcNo').value=cfg.acNo||'';$('bIfsc').value=cfg.ifsc||'';
   $('setModal').classList.add('on');
@@ -794,6 +799,7 @@ $('saveSet').onclick=async()=>{
   cfg.prefix=($('coPrefix').value.trim()||'LBR').replace(/\/+$/,'');
   cfg.gstin=$('bGstin').value.trim().toUpperCase();
   cfg.pan=$('bPan').value.trim().toUpperCase();
+  cfg.aadhaar=$('bAadhaar').value.trim();
   cfg.acName=$('bAcName').value.trim();
   cfg.bankName=$('bBankName').value.trim();
   cfg.acNo=$('bAcNo').value.trim();
