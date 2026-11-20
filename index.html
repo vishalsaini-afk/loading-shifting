@@ -504,6 +504,7 @@ function syncLine(){
    Replace local data with the sheet's rows (so edits/deletes made on other
    phones show up), keeping only this phone's not-yet-synced entries. */
 let pulling=false;
+async function refreshAll(silent){ if(!cfg.url||!me.name) return; await loadShared(); await pullAll(silent); }
 async function pullAll(silent){
   if(!cfg.url||pulling) return false;
   pulling=true;
@@ -608,7 +609,7 @@ async function loadShared(){
     if(!Array.isArray(c.contractors)||!c.contractors.length){ if(migrateOld()) pushShared(); }
     contrOptions(); renderContractors();
     invoices=r.invoices||[];
-    cfg.used=[...new Set((cfg.used||[]).concat(invoices.map(i=>i.no)))];
+    cfg.used=invoices.map(i=>i.no);
     await store(SET,JSON.stringify(cfg));
     refreshInvNo(); renderInvList();
   }catch(e){}
@@ -761,6 +762,7 @@ function tab(name){
   document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===name));
   ['entry','records','invoice'].forEach(s=>$('tab-'+s).classList.toggle('hide',s!==name));
   window.scrollTo({top:0});
+  if(name!=='entry') refreshAll(true);
 }
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 
@@ -963,8 +965,9 @@ function buildInvoice(){
     + aadhaarLine
     + `<div class="sig"><div>${t('prepared')}</div><div>${t('approved')}</div><div>${t('received')}</div></div>`;
 }
-$('genInv').onclick=()=>{
+$('genInv').onclick=async()=>{
   if(!curContr()){toast(t('needContr'));return;}
+  await refreshAll(true);
   const html=buildInvoice();
   if(!html){toast(t('nothing'));return;}
   $('invPreview').innerHTML=`<div class="paper" id="invLive">${html}</div>
@@ -1044,9 +1047,9 @@ $('langBtn').onclick=()=>{lang = lang==='en'?'hi':'en'; localStorage.setItem('ll
   if(!me.name || !cfg.url){ showGate(); }
   else { await loadShared(); await pullAll(true); }
   /* keep the common view fresh */
-  window.addEventListener('online',()=>pullAll(true));
-  document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&me.name) pullAll(true); });
-  setInterval(()=>{ if(!document.hidden&&me.name&&!editId) pullAll(true); },60000);
+  window.addEventListener('online',()=>refreshAll(true));
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) refreshAll(true); });
+  setInterval(()=>{ if(!document.hidden&&!editId) refreshAll(true); },30000);
 })();
 </script>
 </body>

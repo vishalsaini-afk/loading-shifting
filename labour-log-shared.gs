@@ -12,10 +12,11 @@
 
    What it adds:
    • one common Access PIN for everyone (set LL_ACCESS_PIN below)
-   • shared contractor list (name, GSTIN, PAN, Aadhaar, bank…) — entered once,
-     picked from a dropdown on the invoice by any user
+   • shared contractor list in a "Labour Contractors" tab (name, GSTIN, PAN,
+     Aadhaar, bank…) — entered once, picked on the invoice; edit it in the
+     sheet or the app, both stay in step
    • a shared invoice register ("Labour Invoices" tab) so invoice numbers
-     never clash, whoever raises the invoice
+     never clash; delete a row there and that number is free again
    Your existing entry sheet and columns are untouched.
    ===================================================================== */
 
@@ -38,7 +39,14 @@ function llShared_(e) {
   var props = PropertiesService.getScriptProperties();
 
   if (b.action === 'config') {
-    return llOut_({ ok: true, config: JSON.parse(props.getProperty('LL_CONFIG') || '{}'), invoices: llReadInv_() });
+    var cfg = JSON.parse(props.getProperty('LL_CONFIG') || '{}');
+    delete cfg.contractors;
+    var cs = llReadContr_();
+    // first run: move a list saved earlier in script storage into the sheet tab
+    var old = JSON.parse(props.getProperty('LL_CONFIG') || '{}').contractors;
+    if (!cs.length && Array.isArray(old) && old.length) { llWriteContr_(old); cs = llReadContr_(); }
+    cfg.contractors = cs;
+    return llOut_({ ok: true, config: cfg, invoices: llReadInv_() });
   }
 
   if (b.action === 'setConfig') {
@@ -48,8 +56,10 @@ function llShared_(e) {
     c.contractors = (Array.isArray(src.contractors) ? src.contractors : []).map(function (x) {
       var o = {}; F.forEach(function (k) { o[k] = String((x || {})[k] || ''); }); return o;
     }).filter(function (o) { return o.id && o.name; });
-    props.setProperty('LL_CONFIG', JSON.stringify(c));
-    return llOut_({ ok: true, config: c });
+    var lk = LockService.getScriptLock(); lk.waitLock(20000);
+    try { llWriteContr_(c.contractors); } finally { lk.releaseLock(); }
+    props.setProperty('LL_CONFIG', JSON.stringify({ co: c.co, prefix: c.prefix }));
+    return llOut_({ ok: true });
   }
 
   if (b.action === 'logInvoice') {
@@ -68,6 +78,38 @@ function llShared_(e) {
   }
 
   return null;   // anything else → your existing doPost code handles it
+}
+
+/* ---- contractors live in a sheet tab, so the office can edit them there ---- */
+var LL_CONTR_TAB  = 'Labour Contractors';
+var LL_CONTR_HEAD = ['ID','Name','Address & Phone','GSTIN','PAN','Aadhaar','Account Holder','Bank','Account No','IFSC','Invoice Prefix'];
+var LL_CONTR_KEYS = ['id','name','addr','gstin','pan','aadhaar','acName','bankName','acNo','ifsc','prefix'];
+
+function llContrSheet_() {
+  var ss = llSS_(), sh = ss.getSheetByName(LL_CONTR_TAB);
+  if (!sh) {
+    sh = ss.insertSheet(LL_CONTR_TAB); sh.appendRow(LL_CONTR_HEAD); sh.setFrozenRows(1);
+    sh.getRange('A:K').setNumberFormat('@');   // keep A/C no, Aadhaar etc. as text (no 1.23E+11)
+  }
+  return sh;
+}
+function llReadContr_() {
+  var sh = llContrSheet_(), v = sh.getDataRange().getDisplayValues(), out = [], fix = false;
+  for (var r = 1; r < v.length; r++) {
+    if (!String(v[r][1]).trim()) continue;             // skip rows without a name
+    if (!String(v[r][0]).trim()) {                    // row typed in the sheet without ID → give it one
+      v[r][0] = 'c' + Date.now().toString(36) + r; sh.getRange(r + 1, 1).setValue(v[r][0]); fix = true;
+    }
+    var o = {}; LL_CONTR_KEYS.forEach(function (k, i) { o[k] = String(v[r][i] || '').trim(); });
+    out.push(o);
+  }
+  return out;
+}
+function llWriteContr_(list) {
+  var sh = llContrSheet_();
+  if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, LL_CONTR_HEAD.length).clearContent();
+  var rows = (list || []).map(function (x) { return LL_CONTR_KEYS.map(function (k) { return String((x || {})[k] || ''); }); });
+  if (rows.length) sh.getRange(2, 1, rows.length, LL_CONTR_HEAD.length).setNumberFormat('@').setValues(rows);
 }
 
 function llSS_() { return LL_SS_ID ? SpreadsheetApp.openById(LL_SS_ID) : SpreadsheetApp.getActiveSpreadsheet(); }
