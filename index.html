@@ -109,6 +109,19 @@
   .modal.on{display:flex}
   .modal .card{max-width:440px;width:100%;margin:0;max-height:90vh;overflow:auto}
   .hide{display:none !important}
+  .badge{display:inline-block;min-width:18px;padding:1px 6px;border-radius:10px;background:var(--bad);color:#fff;
+    font-size:10px;font-family:'JetBrains Mono',monospace;margin-left:4px;vertical-align:1px}
+  .row.req{border-left-color:var(--mut)}
+  .row.req.pUrgent{border-left-color:var(--bad)} .row.req.pHigh{border-left-color:#ffa94d}
+  .tag.pUrgent{color:#fff;background:var(--bad);border-color:var(--bad)} .tag.pHigh{color:#0e0f0d;background:#ffa94d;border-color:#ffa94d}
+  .reqact{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+  .reqact input{padding:8px;font-size:14px}
+  .reqbtns{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .reqbtns .btn{margin-top:0;flex:1;min-width:120px;padding:11px}
+  .reqbtns input{flex:2;min-width:160px;padding:10px;font-size:14px}
+  .btn.no{background:transparent;color:var(--bad);border:1px solid var(--bad)}
+  .sechead{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:18px 0 8px}
+  @media(max-width:520px){.reqact{grid-template-columns:1fr 1fr}}
 
   /* live invoice preview (light) */
   .paper{background:#fff;color:#000;border-radius:10px;padding:18px;overflow-x:auto}
@@ -160,6 +173,7 @@
 
 <div class="tabs">
   <button class="on" data-tab="entry" data-t="tabEntry">Entry</button>
+  <button data-tab="requests"><span data-t="tabReq">Requests</span><b id="reqBadge" class="badge hide">0</b></button>
   <button data-tab="records" data-t="tabRecords">Records</button>
   <button data-tab="invoice" data-t="tabInvoice">Invoice</button>
 </div>
@@ -231,6 +245,17 @@
       <button class="btn" id="save" data-t="saveEntry">Save entry</button>
       <button class="btn ghost hide" id="cancel" data-t="cancelEdit">Cancel edit</button>
     </div>
+  </section>
+
+  <section id="tab-requests" class="hide">
+    <div class="stats">
+      <div class="stat"><b id="rqPend">0</b><span data-t="rqPend">Pending</span></div>
+      <div class="stat"><b id="rqUrg" style="color:var(--bad)">0</b><span data-t="urgent">Urgent</span></div>
+      <div class="stat"><b id="rqHigh" style="color:#ffa94d">0</b><span data-t="high">High</span></div>
+    </div>
+    <div id="reqList"></div>
+    <div class="sechead" data-t="decided">Recently decided</div>
+    <div id="reqDone"></div>
   </section>
 
   <section id="tab-records" class="hide">
@@ -330,7 +355,7 @@
         <div><label data-t="fBankName">Bank name</label><input id="bBankName" autocomplete="off"></div>
         <div><label data-t="fIfsc">IFSC code</label><input id="bIfsc" autocomplete="off" style="text-transform:uppercase"></div>
         <div><label data-t="fAcNo">Account number</label><input id="bAcNo" inputmode="numeric" autocomplete="off"></div>
-        <div><label data-t="cPrefix">Invoice prefix</label><input id="cPrefix" placeholder="LBR" autocomplete="off" style="text-transform:uppercase"></div>
+        <div><label data-t="lLast">Last bill no.</label><input id="cLast" placeholder="124 or GME/25-26/045" autocomplete="off"></div>
       </div>
       <button class="btn" id="cSave" style="margin-top:10px" data-t="cSaveBtn">Save contractor</button>
       <button class="btn ghost hide" id="cCancel" data-t="cancelEdit">Cancel edit</button>
@@ -377,7 +402,7 @@ const T={
   pullSheet:'Sync from sheet',makeInv:'Create invoice',iNo:'Invoice no.',iDate:'Invoice date',
   iMonth:'Billing month',iPeriod:'Billing period (fortnight)',iPurpose:'Purpose',iCustFilter:'Only this customer / offer (optional)',
   iFrom:'Billed by (contractor / your firm)',iTo:'Billed to',iGst:'GST %',iPo:'PO / reference',
-  previewInv:'Preview & print invoice',autoNo:'Auto-generated from the billing period.',
+  previewInv:'Preview & print invoice',autoNo:'Next number for the selected contractor.',
   editNo:'Edit',prefix:'Invoice number prefix',
   settings:'Settings',sheetUrl:'Apps Script web app URL (/exec)',
   sheetHelp:'Paste the /exec URL from your Apps Script deployment. Entries sync automatically; offline entries queue and sync later.',
@@ -399,7 +424,15 @@ const T={
   bizHead:'Contractors (one-time entry)',fGstin:'GSTIN',fPan:'PAN',fAadhaar:'Aadhaar No.',fAcName:'Account holder name',
   fBankName:'Bank name',fAcNo:'Account number',fIfsc:'IFSC code',bankDetails:'Bank details',
   lAcNo:'A/C No.',lIfsc:'IFSC',
-  cAdd:'Add contractor',cEdit:'Editing contractor',cName:'Contractor / firm name',cAddr:'Address & phone',cPrefix:'Invoice prefix',
+  cAdd:'Add contractor',cEdit:'Editing contractor',cName:'Contractor / firm name',cAddr:'Address & phone',lLast:'Last bill no.',lastBillShort:'Last bill',
+  tabReq:'Requests',rqPend:'Pending',urgent:'Urgent',high:'High',normal:'Normal',decided:'Recently decided',
+  reqNone:'No pending requests.',approve:'Approve',reject:'Reject',whyReject:'Reason for rejecting',
+  rateL:'Rate (₹/labour)',pulleysL:'Pulleys',daysL:'Pulley days',needRate:'Enter the rate first',needWhy:'Write why it is rejected',
+  approvedT:'Approved — added to records',rejectedT:'Rejected — supervisor will see the reason',newReq:'new request',
+  stApproved:'Approved',stRejected:'Rejected',neededOn:'Needed',resent:'resent',
+  verified:'Verified',awaitSup:'Awaiting supervisor',fromReq:'Request',
+  unbilled:'entries are waiting for supervisor verification and are not on this invoice',
+  needOnline:'Connect to the sheet to get the bill no.',reasonLocked:'Reason confirmed by supervisor',
   cSaveBtn:'Save contractor',cSaved:'Contractor saved for everyone',cDel:'Contractor removed',noContr:'No contractors yet — add one below.',
   pickContr:'— Select contractor —',addContr:'+ Add / edit contractors',needContr:'Select a contractor first',needCName:'Enter contractor name',
   sharedNote:'Contractors and company details are shared — every user can pick them on the invoice.',switchUser:'Switch user',
@@ -420,7 +453,7 @@ const T={
   pullSheet:'शीट से सिंक',makeInv:'बिल बनाएँ',iNo:'बिल नं.',iDate:'बिल की तारीख',
   iMonth:'बिलिंग महीना',iPeriod:'बिलिंग अवधि (पखवाड़ा)',iPurpose:'काम',iCustFilter:'सिर्फ यह ग्राहक / ऑफर (वैकल्पिक)',
   iFrom:'बिल देने वाला (ठेकेदार / फर्म)',iTo:'बिल किसके नाम',iGst:'GST %',iPo:'PO / संदर्भ',
-  previewInv:'बिल देखें और प्रिंट करें',autoNo:'बिलिंग अवधि से अपने आप बनता है।',
+  previewInv:'बिल देखें और प्रिंट करें',autoNo:'चुने गए ठेकेदार का अगला नंबर।',
   editNo:'बदलें',prefix:'बिल नंबर का प्रीफिक्स',
   settings:'सेटिंग्स',sheetUrl:'Apps Script वेब ऐप URL (/exec)',
   sheetHelp:'Apps Script डिप्लॉयमेंट का /exec URL पेस्ट करें। एंट्री अपने आप सिंक होंगी; ऑफलाइन एंट्री बाद में सिंक हो जाएँगी।',
@@ -442,7 +475,15 @@ const T={
   bizHead:'ठेकेदार (एक बार एंट्री)',fGstin:'GSTIN',fPan:'PAN',fAadhaar:'आधार नं.',fAcName:'खाताधारक का नाम',
   fBankName:'बैंक का नाम',fAcNo:'खाता संख्या',fIfsc:'IFSC कोड',bankDetails:'बैंक विवरण',
   lAcNo:'खाता सं.',lIfsc:'IFSC',
-  cAdd:'ठेकेदार जोड़ें',cEdit:'ठेकेदार में बदलाव',cName:'ठेकेदार / फर्म का नाम',cAddr:'पता और फोन',cPrefix:'बिल प्रीफिक्स',
+  cAdd:'ठेकेदार जोड़ें',cEdit:'ठेकेदार में बदलाव',cName:'ठेकेदार / फर्म का नाम',cAddr:'पता और फोन',lLast:'आखिरी बिल नं.',lastBillShort:'आखिरी बिल',
+  tabReq:'रिक्वेस्ट',rqPend:'बाकी',urgent:'अर्जेंट',high:'ज़रूरी',normal:'सामान्य',decided:'हाल के फैसले',
+  reqNone:'कोई रिक्वेस्ट बाकी नहीं।',approve:'मंज़ूर',reject:'रिजेक्ट',whyReject:'रिजेक्ट करने का कारण',
+  rateL:'रेट (₹/लेबर)',pulleysL:'पुली',daysL:'पुली दिन',needRate:'पहले रेट भरें',needWhy:'रिजेक्ट का कारण लिखें',
+  approvedT:'मंज़ूर — रिकॉर्ड में जुड़ गया',rejectedT:'रिजेक्ट — सुपरवाइज़र को कारण दिखेगा',newReq:'नई रिक्वेस्ट',
+  stApproved:'मंज़ूर',stRejected:'रिजेक्ट',neededOn:'कब चाहिए',resent:'दोबारा भेजा',
+  verified:'जाँच हुई',awaitSup:'सुपरवाइज़र जाँच बाकी',fromReq:'रिक्वेस्ट',
+  unbilled:'एंट्री सुपरवाइज़र की जाँच के इंतज़ार में हैं, इस बिल में नहीं हैं',
+  needOnline:'बिल नं. के लिए शीट से जुड़ें',reasonLocked:'कारण सुपरवाइज़र ने तय किया',
   cSaveBtn:'ठेकेदार सेव करें',cSaved:'ठेकेदार सबके लिए सेव हो गया',cDel:'ठेकेदार हटा दिया',noContr:'अभी कोई ठेकेदार नहीं — नीचे जोड़ें।',
   pickContr:'— ठेकेदार चुनें —',addContr:'+ ठेकेदार जोड़ें / बदलें',needContr:'पहले ठेकेदार चुनें',needCName:'ठेकेदार का नाम भरें',
   sharedNote:'ठेकेदार और कंपनी की जानकारी सबके लिए एक है — हर यूज़र बिल पर चुन सकता है।',switchUser:'यूज़र बदलें',
@@ -509,7 +550,7 @@ function syncLine(){
    Replace local data with the sheet's rows (so edits/deletes made on other
    phones show up), keeping only this phone's not-yet-synced entries. */
 let pulling=false;
-async function refreshAll(silent){ if(!cfg.url||!me.name) return; await loadShared(); await pullAll(silent); }
+async function refreshAll(silent){ if(!cfg.url||!me.name) return; await loadShared(); await pullAll(silent); await loadRequests(); }
 async function pullAll(silent){
   if(!cfg.url||pulling) return false;
   pulling=true;
@@ -518,7 +559,6 @@ async function pullAll(silent){
     const r=await api({action:'list'});
     if(!r.ok){ if(!silent) toast(t('syncFail')); return false; }
     const local=entries.filter(e=>!e.synced), seen={};
-    let X={}; try{const x=await api({action:'extras'}); if(x&&x.ok) X=x.extras||{};}catch(err){}
     const mine={}; entries.forEach(e=>mine[e.id]=e);
     const dateLike=v=>/^\d{4}-\d{2}-(\d{2}|[AB])(T|$)/.test(String(v||''))||/^\w{3} \w{3} \d{2} \d{4}/.test(String(v||''));
     const server=(r.entries||[]).map(e=>{e.synced=true;
@@ -526,7 +566,6 @@ async function pullAll(silent){
       if(String(e.date||'').includes('T')){const d=new Date(e.date); if(!isNaN(d)) e.date=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);}
       e.labours=Number(e.labours)||0; e.rate=Number(e.rate)||0; e.pulleyDays=Number(e.pulleyDays)||0; e.pulleys=Number(e.pulleys)||(e.pulleyDays?1:0);
       e.date=String(e.date||'').slice(0,10); seen[e.id]=1;
-      const x=X[e.id]; if(x){ e.pulleyDays=Number(x.pulleyDays)||0; e.pulleys=e.pulleyDays?Math.max(1,Number(x.pulleys)||1):0; if(x.by) e.by=x.by; }
       return e;});
     entries=server.concat(local.filter(e=>!seen[e.id]));
     await persist(); monthOptions(); render(); syncLine();
@@ -538,7 +577,7 @@ async function pullAll(silent){
 
 /* ---- shared settings + invoice register (same for every user) ---- */
 const SHARED=['co','prefix','contractors'];
-const CF=['name','addr','gstin','pan','aadhaar','acName','bankName','acNo','ifsc','prefix'];
+const CF=['name','addr','gstin','pan','aadhaar','acName','bankName','acNo','ifsc','lastBill'];
 const curContr=()=>(cfg.contractors||[]).find(c=>c.id===$('i_contr').value)||null;
 /* old single "billing details" → first contractor, so nothing typed earlier is lost */
 function migrateOld(){
@@ -546,7 +585,7 @@ function migrateOld(){
   if(!cfg.contractors.length && (cfg.gstin||cfg.pan||cfg.acNo||cfg.acName)){
     cfg.contractors.push({id:'c'+Date.now().toString(36),name:cfg.acName||'Contractor 1',addr:'',
       gstin:cfg.gstin||'',pan:cfg.pan||'',aadhaar:cfg.aadhaar||'',acName:cfg.acName||'',
-      bankName:cfg.bankName||'',acNo:cfg.acNo||'',ifsc:cfg.ifsc||'',prefix:''});
+      bankName:cfg.bankName||'',acNo:cfg.acNo||'',ifsc:cfg.ifsc||'',lastBill:''});
     return true;
   }
   return false;
@@ -568,7 +607,7 @@ function contrInfo(){
 function renderContractors(){
   const cs=cfg.contractors||[];
   $('cList').innerHTML=cs.length?cs.map(c=>`<div class="row" style="padding:9px 12px;margin-bottom:6px">
-     <div class="r1"><span class="cust" style="margin:0">${esc(c.name)}</span><span class="tag">${esc(c.prefix||cfg.prefix||'LBR')}</span></div>
+     <div class="r1"><span class="cust" style="margin:0">${esc(c.name)}</span><span class="tag">${t('lastBillShort')} ${esc(c.lastBill||'—')}</span></div>
      <div class="meta">${esc([c.gstin,c.acNo?('A/C '+c.acNo):''].filter(Boolean).join(' · '))}</div>
      <div class="acts"><button onclick="editContr('${c.id}')">${t('edit')}</button>
        <button class="del" onclick="delContr('${c.id}')">${t('del')}</button></div></div>`).join('')
@@ -576,7 +615,7 @@ function renderContractors(){
 }
 let cEditId=null;
 const CIN={name:'cName',addr:'cAddr',gstin:'bGstin',pan:'bPan',aadhaar:'bAadhaar',acName:'bAcName',
-  bankName:'bBankName',acNo:'bAcNo',ifsc:'bIfsc',prefix:'cPrefix'};
+  bankName:'bBankName',acNo:'bAcNo',ifsc:'bIfsc',lastBill:'cLast'};
 function clearContrForm(){cEditId=null;CF.forEach(k=>$(CIN[k]).value='');
   $('cFormTitle').textContent=t('cAdd');$('cCancel').classList.add('hide');}
 function editContr(id){const c=(cfg.contractors||[]).find(x=>x.id===id);if(!c)return;cEditId=id;
@@ -598,8 +637,7 @@ window.editContr=editContr; window.delContr=delContr;
 $('cSave').onclick=async()=>{
   const c={id:cEditId||('c'+Date.now().toString(36)+Math.random().toString(36).slice(2,4))};
   CF.forEach(k=>c[k]=$(CIN[k]).value.trim());
-  ['gstin','pan','ifsc','prefix'].forEach(k=>c[k]=c[k].toUpperCase());
-  c.prefix=c.prefix.replace(/\/+$/,'');
+  ['gstin','pan','ifsc'].forEach(k=>c[k]=c[k].toUpperCase());
   if(!c.name){toast(t('needCName'));return;}
   cfg.contractors=(cfg.contractors||[]).filter(x=>x.id!==c.id).concat(c);
   clearContrForm(); renderContractors(); contrOptions();
@@ -633,8 +671,98 @@ function renderInvList(){
     <div class="r1"><span class="offer">${esc(i.no)}</span><span class="cost">${money(i.amount)}</span></div>
     <div class="meta"><span>${esc(String(i.date||'').slice(0,10))}</span>
       ${i.period?`<span class="tag">${esc(periodLabel(i.period))}</span>`:''}
+      ${i.billedBy?`<span class="tag">${esc(i.billedBy)}</span>`:''}
       ${i.by?`<span>${t('raisedBy')} ${esc(i.by)}</span>`:''}</div></div>`).join('');
 }
+
+/* ---- labour requests from supervisors (Field Tools) ---- */
+let requests=[], reqBusy=false;
+let seenReq=new Set((()=>{try{return JSON.parse(localStorage.getItem('ll_seenreq')||'[]');}catch(e){return [];}})());
+const PRI={Urgent:0,High:1,Normal:2};
+const priTxt=p=>p==='Urgent'?'🔴 '+t('urgent'):p==='High'?'🟠 '+t('high'):'⚪ '+t('normal');
+async function loadRequests(){
+  if(!cfg.url||!me.name||reqBusy) return;
+  reqBusy=true;
+  try{
+    const r=await api({action:'reqList'});
+    if(!r.ok) return;
+    requests=r.requests||[];
+    const pend=requests.filter(q=>q.status==='Pending');
+    const fresh=pend.filter(q=>!seenReq.has(q.id));
+    if(fresh.length && seenReq.size) alertNew(fresh);
+    pend.forEach(q=>seenReq.add(q.id)); if(!seenReq.size) seenReq.add('-');
+    try{localStorage.setItem('ll_seenreq',JSON.stringify([...seenReq].slice(-500)));}catch(e){}
+    renderRequests();
+  }catch(e){} finally{ reqBusy=false; }
+}
+function alertNew(list){
+  const urgent=list.some(q=>q.priority==='Urgent');
+  try{navigator.vibrate&&navigator.vibrate(urgent?[300,120,300,120,300]:[200,100,200]);}catch(e){}
+  try{const A=new (window.AudioContext||window.webkitAudioContext)(), o=A.createOscillator(), g=A.createGain();
+    o.connect(g); g.connect(A.destination); o.frequency.value=urgent?1180:880; g.gain.value=.15;
+    o.start(); o.stop(A.currentTime+(urgent?.6:.3));}catch(e){}
+  toast('🔔 '+list.length+' '+t('newReq')+(urgent?' · 🔴 '+t('urgent'):''));
+}
+function renderRequests(){
+  const pend=requests.filter(q=>q.status==='Pending')
+    .sort((a,b)=>(PRI[a.priority]??2)-(PRI[b.priority]??2)||String(a.raisedAt).localeCompare(String(b.raisedAt)));
+  const n=pend.length;
+  $('reqBadge').textContent=n; $('reqBadge').classList.toggle('hide',!n);
+  document.title=(n?'('+n+') ':'')+'Labour Log — Unloading & Shifting';
+  $('rqPend').textContent=n;
+  $('rqUrg').textContent=pend.filter(q=>q.priority==='Urgent').length;
+  $('rqHigh').textContent=pend.filter(q=>q.priority==='High').length;
+  $('reqList').innerHTML=n?pend.map(q=>{
+    const id=esc(q.id), pl=Number(q.pulleys)||0, pdy=Number(q.pulleyDays)||0;
+    return `<div class="row req p${esc(q.priority)}">
+      <div class="r1"><span class="offer">${esc(q.offer)}</span><span class="tag p${esc(q.priority)}">${priTxt(q.priority)}</span></div>
+      <div class="cust">${esc(q.customer)||'—'}</div>
+      <div class="meta">
+        <span class="tag">${t(q.purpose==='Shifting'?'shifting':'unloading')}</span>
+        <span class="tag ${q.reason==='Rework'?'rw':''}">${t(q.reason==='Rework'?'rework':'work')}</span>
+        <span>👷 ${esc(q.labours)}</span>
+        ${pdy?`<span>⛓ ${pl>1?pl+' × ':''}${pdy}d</span>`:''}
+        <span>📅 ${t('neededOn')} ${esc(q.date)||'—'}</span>
+        ${q.location?`<span>📍 ${esc(q.location)}</span>`:''}
+      </div>
+      <div class="meta" style="margin-top:4px">👤 ${esc(q.sup)} · ${esc(q.raisedAt)}${Number(q.resends)?` · ↻ ${t('resent')} ${esc(q.resends)}×`:''}</div>
+      ${q.note?`<div class="note">${esc(q.note)}</div>`:''}
+      <div class="reqact">
+        <div><label>${t('rateL')}</label><input type="number" id="ra_${id}" value="800" min="0" step="50"></div>
+        <div><label>${t('lNum')}</label><input type="number" id="rl_${id}" value="${esc(q.labours)}" min="1"></div>
+        <div><label>${t('pulleysL')}</label><input type="number" id="rp_${id}" value="${pl}" min="0"></div>
+        <div><label>${t('daysL')}</label><input type="number" id="rd_${id}" value="${pdy}" min="0"></div>
+      </div>
+      <div class="reqbtns"><button class="btn" onclick="approveReq('${id}',this)">✓ ${t('approve')}</button></div>
+      <div class="reqbtns"><input id="rr_${id}" placeholder="${t('whyReject')}"><button class="btn no" onclick="rejectReq('${id}',this)">✗ ${t('reject')}</button></div>
+    </div>`;}).join('') : `<div class="empty">${t('reqNone')}</div>`;
+  const done=requests.filter(q=>q.status!=='Pending').slice(0,20);
+  $('reqDone').innerHTML=done.map(q=>`<div class="row" style="padding:9px 12px;border-left-color:${q.status==='Approved'?'var(--ok)':'var(--bad)'}">
+    <div class="r1"><span class="offer">${esc(q.offer)}</span><span class="tag ${q.status==='Approved'?'sync':'pend'}">${q.status==='Approved'?t('stApproved'):t('stRejected')}</span></div>
+    <div class="meta">${esc(q.customer)} · 👷 ${esc(q.labours)} · 👤 ${esc(q.sup)}
+      ${q.status==='Approved'?` · ₹${esc(q.rate)}/lab`:''} · ${esc(q.decidedBy)} ${esc(q.decidedAt)}</div>
+    ${q.status==='Rejected'&&q.rejectReason?`<div class="note">✗ ${esc(q.rejectReason)}</div>`:''}</div>`).join('');
+}
+async function approveReq(id,btn){
+  const rate=parseFloat($('ra_'+id).value)||0;
+  if(rate<=0){toast(t('needRate'));$('ra_'+id).focus();return;}
+  btn.disabled=true;
+  try{
+    const r=await api({action:'reqApprove',id,rate,labours:parseInt($('rl_'+id).value,10)||0,
+      pulleys:parseInt($('rp_'+id).value,10)||0,pulleyDays:parseInt($('rd_'+id).value,10)||0});
+    if(r.ok){toast(t('approvedT')); await loadRequests(); await pullAll(true);} else {toast(r.error||t('syncFail')); btn.disabled=false; loadRequests();}
+  }catch(e){toast(t('syncFail')); btn.disabled=false;}
+}
+async function rejectReq(id,btn){
+  const why=$('rr_'+id).value.trim();
+  if(!why){toast(t('needWhy'));$('rr_'+id).focus();return;}
+  btn.disabled=true;
+  try{
+    const r=await api({action:'reqReject',id,reason:why});
+    if(r.ok){toast(t('rejectedT')); await loadRequests();} else {toast(r.error||t('syncFail')); btn.disabled=false; loadRequests();}
+  }catch(e){toast(t('syncFail')); btn.disabled=false;}
+}
+window.approveReq=approveReq; window.rejectReq=rejectReq;
 
 /* ---- one access: name + common PIN, checked by the sheet backend ---- */
 function showGate(err){
@@ -654,24 +782,19 @@ $('gGo').onclick=async()=>{
   }catch(e){ if(e.message!=='pin') $('gErr').textContent=t('syncFail'); return; }
   localStorage.setItem('ll_user',n); localStorage.setItem('ll_pin',p);
   $('gate').classList.remove('on'); syncLine();
-  await loadShared(); await pullAll(true);
+  await refreshAll(true);
 };
 $('gUrl').onclick=()=>{ $('gate').classList.remove('on'); openSettings(); };
 async function pushOne(e){
   if(!cfg.url) return;
   try{const r=await api({action:'save',entry:e});
-    if(r.ok){await saveExtras([e]); e.synced=true;await persist();syncLine();render();}}catch(err){}
-}
-/* pulley details + who logged it → "Labour Pulley" tab (works whatever the old save script keeps) */
-async function saveExtras(list){
-  try{await api({action:'saveExtras',items:list.map(e=>({id:e.id,offer:e.offer||'',date:e.date||'',
-    pulleys:pulleyNo(e),pulleyDays:Number(e.pulleyDays)||0,by:e.by||''}))});}catch(x){}
+    if(r.ok){e.synced=true;await persist();syncLine();render();}}catch(err){}
 }
 async function pushPending(){
   const pend=entries.filter(e=>!e.synced && /^\d{3,}/.test(String(e.offer||'').trim()));   /* no offer → waits for edit */
   if(!cfg.url||!pend.length) return;
   try{const r=await api({action:'save',entries:pend});
-    if(r.ok){await saveExtras(pend); pend.forEach(e=>e.synced=true);await persist();syncLine();render();}}catch(e){}
+    if(r.ok){pend.forEach(e=>e.synced=true);await persist();syncLine();render();}}catch(e){}
 }
 $('pull').onclick=async()=>{
   if(!cfg.url){toast(t('needSheet'));return;}
@@ -734,6 +857,9 @@ $('save').onclick=async()=>{
     by: (editId && (entries.find(x=>x.id===editId)||{}).by) || me.name
   };
   e.period = e.date ? periodOf(e.date) : '';
+  if(editId){const o=entries.find(x=>x.id===editId)||{};
+    ['verified','verifiedBy','requestId'].forEach(k=>{if(o[k]!=null)e[k]=o[k];});
+    if(o.verified&&o.verifiedBy&&o.verifiedBy!=='legacy') e.reason=o.reason;}
   if(!e.date){toast(t('needDate'));return;}
   if(!e.offer){toast(t('needName'));$('f_offer').focus();$('f_offer').style.borderColor='var(--bad)';return;}
   if(!/^\d{3,}/.test(e.offer)){toast(t('badOffer'));$('f_offer').focus();$('f_offer').style.borderColor='var(--bad)';return;}
@@ -757,6 +883,7 @@ function resetForm(){
   $('f_date').value=new Date().toISOString().slice(0,10);
   ['f_offer','f_cust','f_loc','f_note'].forEach(i=>$(i).value='');
   $('f_num').value=2; $('f_rate').value=800; setPurpose('Unloading'); setReason('Work');
+  $('rWork').disabled=$('rRework').disabled=false;
   $('f_pulley').checked=false; $('f_pulley_days').value=1; $('f_pulley_no').value=1; $('pulleyDaysWrap').classList.add('hide');
 }
 function edit(id){
@@ -768,6 +895,8 @@ function edit(id){
   $('f_date').value=e.date; $('f_offer').value=e.offer||''; $('f_cust').value=e.customer||'';
   $('f_loc').value=e.location||''; $('f_num').value=e.labours; $('f_rate').value=e.rate;
   $('f_note').value=e.note||''; setPurpose(e.purpose||'Unloading'); setReason(e.reason||'Work');
+  const lockR=!!(e.verified&&e.verifiedBy&&e.verifiedBy!=='legacy');
+  $('rWork').disabled=$('rRework').disabled=lockR; if(lockR) toast(t('reasonLocked'));
   $('f_pulley').checked=!!e.pulleyDays; $('f_pulley_days').value=e.pulleyDays||1; $('f_pulley_no').value=pulleyNo(e)||1; pulleyCalc();
   $('pulleyDaysWrap').classList.toggle('hide',!e.pulleyDays);
   window.scrollTo({top:0,behavior:'smooth'});
@@ -783,7 +912,7 @@ window.edit=edit; window.del=del;
 /* ================= tabs ================= */
 function tab(name){
   document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===name));
-  ['entry','records','invoice'].forEach(s=>$('tab-'+s).classList.toggle('hide',s!==name));
+  ['entry','requests','records','invoice'].forEach(s=>$('tab-'+s).classList.toggle('hide',s!==name));
   window.scrollTo({top:0});
   if(name!=='entry') refreshAll(true);
 }
@@ -831,6 +960,9 @@ function render(){
           <span class="tag">${t(e.purpose==='Shifting'?'shifting':'unloading')}</span>
           <span class="tag ${(e.reason||'Work')==='Rework'?'rw':''}">${t((e.reason||'Work')==='Rework'?'rework':'work')}</span>
           <span class="tag ${e.synced?'sync':'pend'}">${e.synced?t('synced'):t('pending')}</span>
+          ${e.synced&&e.verified===true&&e.verifiedBy&&e.verifiedBy!=='legacy'?`<span class="tag sync">✓ ${t('verified')} · ${esc(e.verifiedBy)}</span>`:''}
+          ${e.synced&&e.verified===false?`<span class="tag pend">⏳ ${t('awaitSup')}</span>`:''}
+          ${e.requestId?`<span class="tag">📨 ${t('fromReq')}</span>`:''}
           ${(!e.synced&&!/^\d{3,}/.test(String(e.offer||'').trim()))?`<span class="tag pend">⚠ ${t('lOffer')}</span>`:''}
           ${e.pulleyDays?`<span class="tag" style="border-color:#e2f14d;color:#e2f14d">⛓ ${t('pulleyTag')} ${pulleyTxt(e)} · ${money(pulleyCost(e))}</span>`:''}
           <span>${e.labours} × ${money(e.rate)}</span>
@@ -916,19 +1048,22 @@ $('printReg').onclick=()=>{
 /* ================= invoice ================= */
 /* LBR/2026/07A  → prefix / year / month + fortnight.
    A second invoice raised in the same fortnight becomes …07A-2, then -3. */
-function autoInvNo(period){
-  if(!period) return '';
-  const cc=curContr();
-  const base=((cc&&cc.prefix)||cfg.prefix||'LBR')+'/'+period.slice(0,4)+'/'+period.slice(5,7)+period.slice(-1);
-  const used=cfg.used||[];
-  if(!used.includes(base)) return base;
-  let n=2;
-  while(used.includes(base+'-'+n)) n++;
-  return base+'-'+n;
+/* bill numbers run per contractor: highest of (its last bill no., its invoices) + 1.
+   "124" → "125", "GME/25-26/045" → "GME/25-26/046". The sheet hands out the final number. */
+function nextNoFrom(list){
+  let best=null,bestN=-1;
+  list.forEach(s=>{const m=String(s||'').trim().match(/^(.*?)(\d+)(\D*)$/); if(m&&Number(m[2])>bestN){bestN=Number(m[2]);best=m;}});
+  if(!best) return '1';
+  let n=String(bestN+1); while(n.length<best[2].length) n='0'+n;
+  return best[1]+n+best[3];
+}
+function autoInvNo(){
+  const c=curContr(); if(!c) return '';
+  return nextNoFrom([c.lastBill||''].concat(invoices.filter(i=>i.contractorId===c.id).map(i=>i.no)));
 }
 function refreshInvNo(){
   if($('i_no').dataset.manual==='1') return;
-  $('i_no').value=autoInvNo($('i_month').value);
+  $('i_no').value=autoInvNo();
 }
 async function markUsed(no){
   if(!no) return;
@@ -941,10 +1076,11 @@ $('unlockNo').onclick=()=>{
   f.readOnly=false; f.dataset.manual='1'; f.focus(); f.select();
 };
 
-function invRows(){
+function invRows(all){
   const pd=$('i_month').value, p=$('i_purpose').value,
         rs=$('i_reason').value, f=$('i_filter').value.toLowerCase().trim();
   return entries.filter(e=>{
+    if(!all && cfg.url && e.verified!==true) return false;   /* only supervisor-verified work is billed */
     if(pd&&periodOf(e.date)!==pd) return false;
     if(p&&e.purpose!==p) return false;
     if(rs&&(e.reason||'Work')!==rs) return false;
@@ -993,24 +1129,30 @@ $('genInv').onclick=async()=>{
   if(!curContr()){toast(t('needContr'));return;}
   await refreshAll(true);
   const html=buildInvoice();
-  if(!html){toast(t('nothing'));return;}
-  $('invPreview').innerHTML=`<div class="paper" id="invLive">${html}</div>
+  if(!html){const w=invRows(true).length; toast(w?('⏳ '+w+' '+t('unbilled')):t('nothing'));return;}
+  const waiting=invRows(true).length-invRows().length;
+  $('invPreview').innerHTML=(waiting?`<div class="hint" style="color:#ffa94d;margin-bottom:8px">⏳ ${waiting} ${t('unbilled')}</div>`:'')
+    +`<div class="paper" id="invLive">${html}</div>
     <button class="btn" id="printInv">${t('printNow')}</button>`;
   $('printInv').onclick=async()=>{
-    $('printArea').innerHTML=`<div class="paper">${buildInvoice()}</div>`;
-    const no=$('i_no').value.trim(), rows=invRows();
+    const manual=$('i_no').dataset.manual==='1', rows=invRows();
     const sub=rows.reduce((s2,e)=>s2+entryAmt(e),0), gp=parseFloat($('i_gst').value)||0;
-    await markUsed(no);
-    if(cfg.url&&no){
+    if(cfg.url){
       try{
-        const r=await api({action:'logInvoice',invoice:{no,date:$('i_date').value,period:$('i_month').value,
+        /* the sheet gives out the next number for this contractor, so two people never get the same one */
+        const r=await api({action:manual?'logInvoice':'reserveInvoice',invoice:{no:$('i_no').value.trim(),
+          date:$('i_date').value,period:$('i_month').value,
           purpose:$('i_purpose').value,reason:$('i_reason').value,filter:$('i_filter').value.trim(),
           billedBy:(curContr()||{}).name||'',billedTo:$('i_to').value.trim(),entries:rows.length,
-          subtotal:sub,gst:gp,amount:Math.round(sub*(1+gp/100)),by:me.name}});
-        if(r.ok){ toast(t('invLogged')); await loadShared(); }
-      }catch(e){}
+          subtotal:sub,gst:gp,amount:Math.round(sub*(1+gp/100)),by:me.name,contractorId:(curContr()||{}).id||''}});
+        if(!r.ok||!r.no){ toast(r.error||t('needOnline')); return; }
+        $('i_no').value=r.no; toast(t('invLogged')+' · '+r.no);
+      }catch(e){ if(e.message!=='pin') toast(t('needOnline')); return; }
     }
+    $('invLive').innerHTML=buildInvoice();
+    $('printArea').innerHTML=`<div class="paper">${buildInvoice()}</div>`;
     window.print();
+    loadShared();
     $('i_no').readOnly=true; delete $('i_no').dataset.manual; refreshInvNo();
   };
   $('invPreview').scrollIntoView({behavior:'smooth'});
@@ -1055,7 +1197,7 @@ function applyLang(){
   $('f_note').placeholder = lang==='en' ? 'Contractor, vehicle, floor…' : 'ठेकेदार, गाड़ी, फ्लोर…';
   $('formTitle').textContent = editId ? t('editEntry') : t('newEntry');
   $('save').textContent = editId ? t('updateEntry') : t('saveEntry');
-  syncLine(); monthOptions(); contrOptions(); renderContractors(); render();
+  syncLine(); monthOptions(); contrOptions(); renderContractors(); render(); renderRequests();
 }
 $('langBtn').onclick=()=>{lang = lang==='en'?'hi':'en'; localStorage.setItem('ll_lang',lang); applyLang();};
 
@@ -1069,7 +1211,7 @@ $('langBtn').onclick=()=>{lang = lang==='en'?'hi':'en'; localStorage.setItem('ll
   if(SHEET_URL) cfg.url=SHEET_URL;          /* one link for everyone */
   migrateOld(); contrOptions(); resetForm(); applyLang(); refreshInvNo(); renderInvList();
   if(!me.name || !cfg.url){ showGate(); }
-  else { await loadShared(); await pullAll(true); }
+  else { await refreshAll(true); }
   /* keep the common view fresh */
   window.addEventListener('online',()=>refreshAll(true));
   document.addEventListener('visibilitychange',()=>{ if(!document.hidden) refreshAll(true); });
