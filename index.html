@@ -171,7 +171,7 @@
       <h2 id="formTitle" data-t="newEntry">New entry</h2>
       <div class="grid">
         <div><label data-t="lDate">Date</label><input type="date" id="f_date"></div>
-        <div><label data-t="lOffer">Offer no.</label><input id="f_offer" placeholder="75057/14" autocomplete="off"></div>
+        <div><label><span data-t="lOffer">Offer no.</span> <b style="color:var(--bad)">*</b></label><input id="f_offer" placeholder="75057/14" autocomplete="off" inputmode="text" required></div>
 
         <div class="full mic-wrap">
           <label data-t="lCust">Customer name</label>
@@ -384,7 +384,7 @@ const T={
   company:'Company name on printouts',connect:'Save & connect',close:'Close',
   saved:'Entry saved',updated:'Entry updated',deleted:'Entry deleted',
   noData:'No entries yet. Log today\u2019s labour above.',
-  edit:'Edit',del:'Delete',needDate:'Pick a date',needName:'Add an offer no. or customer',
+  edit:'Edit',del:'Delete',needDate:'Pick a date',needName:'Offer no. is required — enter it to save',badOffer:'Offer no. must start with a number, e.g. 75057/14',
   needNum:'Enter no. of labours',
   connected:'SHEET CONNECTED',offline:'OFFLINE · LOCAL ONLY',pending:'PENDING',synced:'SYNCED',
   listening:'Listening…',noMic:'Voice input not supported here — use Chrome',
@@ -427,7 +427,7 @@ const T={
   company:'प्रिंट पर कंपनी का नाम',connect:'सेव और कनेक्ट',close:'बंद करें',
   saved:'एंट्री सेव हो गई',updated:'एंट्री अपडेट हो गई',deleted:'एंट्री हटा दी गई',
   noData:'अभी कोई एंट्री नहीं। ऊपर आज की लेबर दर्ज करें।',
-  edit:'बदलें',del:'हटाएँ',needDate:'तारीख चुनें',needName:'ऑफर नं. या ग्राहक भरें',
+  edit:'बदलें',del:'हटाएँ',needDate:'तारीख चुनें',needName:'ऑफर नं. ज़रूरी है — सेव करने के लिए भरें',badOffer:'ऑफर नं. नंबर से शुरू होना चाहिए, जैसे 75057/14',
   needNum:'लेबर की संख्या भरें',
   connected:'शीट कनेक्ट है',offline:'ऑफलाइन · सिर्फ इस डिवाइस में',pending:'बाकी',synced:'सिंक',
   listening:'सुन रहा हूँ…',noMic:'यहाँ वॉइस सपोर्ट नहीं है — क्रोम इस्तेमाल करें',
@@ -668,7 +668,7 @@ async function saveExtras(list){
     pulleys:pulleyNo(e),pulleyDays:Number(e.pulleyDays)||0,by:e.by||''}))});}catch(x){}
 }
 async function pushPending(){
-  const pend=entries.filter(e=>!e.synced);
+  const pend=entries.filter(e=>!e.synced && /^\d{3,}/.test(String(e.offer||'').trim()));   /* no offer → waits for edit */
   if(!cfg.url||!pend.length) return;
   try{const r=await api({action:'save',entries:pend});
     if(r.ok){await saveExtras(pend); pend.forEach(e=>e.synced=true);await persist();syncLine();render();}}catch(e){}
@@ -735,7 +735,9 @@ $('save').onclick=async()=>{
   };
   e.period = e.date ? periodOf(e.date) : '';
   if(!e.date){toast(t('needDate'));return;}
-  if(!e.customer&&!e.offer){toast(t('needName'));return;}
+  if(!e.offer){toast(t('needName'));$('f_offer').focus();$('f_offer').style.borderColor='var(--bad)';return;}
+  if(!/^\d{3,}/.test(e.offer)){toast(t('badOffer'));$('f_offer').focus();$('f_offer').style.borderColor='var(--bad)';return;}
+  $('f_offer').style.borderColor='';
   if(e.labours<1){toast(t('needNum'));return;}
   if(editId){entries=entries.map(x=>x.id===editId?e:x);toast(t('updated'));}
   else{entries.push(e);toast(t('saved'));}
@@ -829,6 +831,7 @@ function render(){
           <span class="tag">${t(e.purpose==='Shifting'?'shifting':'unloading')}</span>
           <span class="tag ${(e.reason||'Work')==='Rework'?'rw':''}">${t((e.reason||'Work')==='Rework'?'rework':'work')}</span>
           <span class="tag ${e.synced?'sync':'pend'}">${e.synced?t('synced'):t('pending')}</span>
+          ${(!e.synced&&!/^\d{3,}/.test(String(e.offer||'').trim()))?`<span class="tag pend">⚠ ${t('lOffer')}</span>`:''}
           ${e.pulleyDays?`<span class="tag" style="border-color:#e2f14d;color:#e2f14d">⛓ ${t('pulleyTag')} ${pulleyTxt(e)} · ${money(pulleyCost(e))}</span>`:''}
           <span>${e.labours} × ${money(e.rate)}</span>
           ${e.location?`<span>· ${esc(e.location)}</span>`:''}

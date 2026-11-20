@@ -38,6 +38,13 @@ function llShared_(e) {
     return llOut_({ ok: false, error: 'pin' });
   }
 
+  // no entry without an Offer No — blocks old app copies too
+  if (b.action === 'save') {
+    var list = b.entries || (b.entry ? [b.entry] : []);
+    var bad = list.filter(function (x) { return !/^\d{3,}/.test(String((x || {}).offer || '').trim()); });
+    if (bad.length) return llOut_({ ok: false, error: 'offer', message: 'Offer No is required (must start with a number)' });
+  }
+
   var props = PropertiesService.getScriptProperties();
 
   if (b.action === 'config') {
