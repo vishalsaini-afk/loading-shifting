@@ -79,6 +79,9 @@ function llShared_(e) {
     } finally { lock.releaseLock(); }
   }
 
+  // read the entries ourselves, column by HEADING (fixes dates showing as Offer No)
+  if (b.action === 'list') return llOut_({ ok: true, entries: llList_() });
+
   if (b.action === 'saveExtras') {
     var lk2 = LockService.getScriptLock(); lk2.waitLock(20000);
     try {
@@ -134,6 +137,35 @@ function llWriteContr_(list) {
   if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, LL_CONTR_HEAD.length).clearContent();
   var rows = (list || []).map(function (x) { return LL_CONTR_KEYS.map(function (k) { return String((x || {})[k] || ''); }); });
   if (rows.length) sh.getRange(2, 1, rows.length, LL_CONTR_HEAD.length).setNumberFormat('@').setValues(rows);
+}
+
+/* ---- entries list: matched by column heading, read as shown in the sheet ---- */
+var LL_LOG_TAB = 'Labour Log';
+function llList_() {
+  var sh = llSS_().getSheetByName(LL_LOG_TAB) || llSS_().getSheets()[0];
+  var v = sh.getDataRange().getDisplayValues();          // text exactly as seen — no date conversion
+  if (v.length < 2) return [];
+  var norm = function (h) { return String(h).toLowerCase().replace(/[^a-z]/g, ''); };
+  var H = v[0].map(norm), col = function () {
+    for (var i = 0; i < arguments.length; i++) { var k = H.indexOf(arguments[i]); if (k > -1) return k; }
+    return -1;
+  };
+  var C = { id: col('id'), date: col('date'), offer: col('offerno', 'offer', 'offernumber'),
+    customer: col('customer', 'customername'), location: col('location', 'site'),
+    labours: col('nooflabours', 'labours', 'labour'), purpose: col('purpose'), reason: col('reason'),
+    rate: col('rate', 'rateperlabour'), pulley: col('chainpulley'), note: col('remarks', 'remark', 'note') };
+  var g = function (r, k) { return C[k] > -1 ? String(r[C[k]] || '').trim() : ''; };
+  var num = function (x) { return Number(String(x).replace(/[^0-9.\-]/g, '')) || 0; };
+  var out = [];
+  for (var r = 1; r < v.length; r++) {
+    var id = g(v[r], 'id'); if (!id) continue;
+    var pul = num(g(v[r], 'pulley'));
+    out.push({ id: id, date: g(v[r], 'date'), offer: g(v[r], 'offer'), customer: g(v[r], 'customer'),
+      location: g(v[r], 'location'), labours: num(g(v[r], 'labours')), rate: num(g(v[r], 'rate')),
+      purpose: g(v[r], 'purpose') || 'Unloading', reason: g(v[r], 'reason') || 'Work', note: g(v[r], 'note'),
+      pulleyDays: pul ? Math.round(pul / 1500) || 1 : 0, pulleys: pul ? 1 : 0 });
+  }
+  return out;
 }
 
 /* ---- chain pulley per entry: edit No. of Pulleys / Days here and the app follows ---- */

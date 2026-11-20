@@ -519,7 +519,11 @@ async function pullAll(silent){
     if(!r.ok){ if(!silent) toast(t('syncFail')); return false; }
     const local=entries.filter(e=>!e.synced), seen={};
     let X={}; try{const x=await api({action:'extras'}); if(x&&x.ok) X=x.extras||{};}catch(err){}
+    const mine={}; entries.forEach(e=>mine[e.id]=e);
+    const dateLike=v=>/^\d{4}-\d{2}-(\d{2}|[AB])(T|$)/.test(String(v||''))||/^\w{3} \w{3} \d{2} \d{4}/.test(String(v||''));
     const server=(r.entries||[]).map(e=>{e.synced=true;
+      if(dateLike(e.offer)) e.offer=(mine[e.id]&&!dateLike(mine[e.id].offer))?mine[e.id].offer:'';   /* never show a date as Offer No */
+      if(String(e.date||'').includes('T')){const d=new Date(e.date); if(!isNaN(d)) e.date=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);}
       e.labours=Number(e.labours)||0; e.rate=Number(e.rate)||0; e.pulleyDays=Number(e.pulleyDays)||0; e.pulleys=Number(e.pulleys)||(e.pulleyDays?1:0);
       e.date=String(e.date||'').slice(0,10); seen[e.id]=1;
       const x=X[e.id]; if(x){ e.pulleyDays=Number(x.pulleyDays)||0; e.pulleys=e.pulleyDays?Math.max(1,Number(x.pulleys)||1):0; if(x.by) e.by=x.by; }
