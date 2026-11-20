@@ -285,7 +285,8 @@
         <div class="full"><label data-t="iCustFilter">Only this customer / offer (optional)</label>
           <input id="i_filter" placeholder="75057/14"></div>
         <div class="full"><label data-t="iFrom">Billed by (contractor / your firm)</label>
-          <input id="i_from" placeholder="Name, address, phone, GSTIN"></div>
+          <select id="i_contr"></select>
+          <div class="hint" id="i_contr_info"></div></div>
         <div class="full"><label data-t="iTo">Billed to</label>
           <input id="i_to" value="Lingel Windows &amp; Doors Technologies Pvt. Ltd."></div>
         <div class="full"><label data-t="iPo">PO / reference</label><input id="i_po"></div>
@@ -293,6 +294,10 @@
       <button class="btn" id="genInv" data-t="previewInv">Preview &amp; print invoice</button>
     </div>
     <div id="invPreview"></div>
+    <div class="card" style="margin-top:14px">
+      <h2 data-t="invRaised">Invoices raised (all users)</h2>
+      <div id="invList"></div>
+    </div>
   </section>
 
 </div>
@@ -308,19 +313,44 @@
     <label style="margin-top:10px" data-t="prefix">Invoice number prefix</label>
     <input id="coPrefix" placeholder="LBR">
 
-    <label style="margin-top:14px;color:var(--hi);font-weight:800" data-t="bizHead">Your billing details (one-time)</label>
-    <div class="grid" style="margin-top:2px">
-      <div><label data-t="fGstin">GSTIN</label><input id="bGstin" autocomplete="off" style="text-transform:uppercase"></div>
-      <div><label data-t="fPan">PAN</label><input id="bPan" maxlength="10" autocomplete="off" style="text-transform:uppercase"></div>
-      <div class="full"><label data-t="fAadhaar">Aadhaar No.</label><input id="bAadhaar" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="XXXX XXXX XXXX"></div>
-      <div class="full"><label data-t="fAcName">Account holder name</label><input id="bAcName" autocomplete="off"></div>
-      <div><label data-t="fBankName">Bank name</label><input id="bBankName" autocomplete="off"></div>
-      <div><label data-t="fIfsc">IFSC code</label><input id="bIfsc" autocomplete="off" style="text-transform:uppercase"></div>
-      <div class="full"><label data-t="fAcNo">Account number</label><input id="bAcNo" inputmode="numeric" autocomplete="off"></div>
+    <label style="margin-top:14px;color:var(--hi);font-weight:800" data-t="bizHead">Contractors (one-time entry)</label>
+    <div id="cList" style="margin:6px 0 10px"></div>
+    <div class="card" style="background:var(--panel-2);padding:12px;margin:0">
+      <h2 id="cFormTitle" style="margin-bottom:8px" data-t="cAdd">Add contractor</h2>
+      <div class="grid">
+        <div class="full"><label data-t="cName">Contractor / firm name</label><input id="cName" autocomplete="off"></div>
+        <div class="full"><label data-t="cAddr">Address &amp; phone</label><input id="cAddr" autocomplete="off"></div>
+        <div><label data-t="fGstin">GSTIN</label><input id="bGstin" autocomplete="off" style="text-transform:uppercase"></div>
+        <div><label data-t="fPan">PAN</label><input id="bPan" maxlength="10" autocomplete="off" style="text-transform:uppercase"></div>
+        <div class="full"><label data-t="fAadhaar">Aadhaar No.</label><input id="bAadhaar" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="XXXX XXXX XXXX"></div>
+        <div class="full"><label data-t="fAcName">Account holder name</label><input id="bAcName" autocomplete="off"></div>
+        <div><label data-t="fBankName">Bank name</label><input id="bBankName" autocomplete="off"></div>
+        <div><label data-t="fIfsc">IFSC code</label><input id="bIfsc" autocomplete="off" style="text-transform:uppercase"></div>
+        <div><label data-t="fAcNo">Account number</label><input id="bAcNo" inputmode="numeric" autocomplete="off"></div>
+        <div><label data-t="cPrefix">Invoice prefix</label><input id="cPrefix" placeholder="LBR" autocomplete="off" style="text-transform:uppercase"></div>
+      </div>
+      <button class="btn" id="cSave" style="margin-top:10px" data-t="cSaveBtn">Save contractor</button>
+      <button class="btn ghost hide" id="cCancel" data-t="cancelEdit">Cancel edit</button>
     </div>
 
+    <div class="hint"><span data-t="sharedNote">These details are shared — every user's invoice uses them.</span></div>
     <button class="btn" id="saveSet" data-t="connect">Save &amp; connect</button>
+    <button class="btn ghost" id="switchUser" data-t="switchUser">Switch user</button>
     <button class="btn ghost" id="closeSet" data-t="close">Close</button>
+  </div>
+</div>
+
+<!-- one shared access: name + common PIN, asked once per device -->
+<div class="modal" id="gate">
+  <div class="card">
+    <h2 data-t="gateTitle">Labour Log access</h2>
+    <label data-t="gateName">Your name</label>
+    <input id="gName" autocomplete="name">
+    <label style="margin-top:10px" data-t="gatePin">Access PIN</label>
+    <input id="gPin" type="password" inputmode="numeric" autocomplete="off">
+    <div class="hint"><span id="gErr" style="color:var(--bad)"></span></div>
+    <button class="btn" id="gGo" data-t="gateGo">Open</button>
+    <div class="hint" id="gUrlWrap"><button id="gUrl" data-t="setUrl">Set sheet link</button></div>
   </div>
 </div>
 
@@ -363,9 +393,16 @@ const T={
   received:'Receiver signature',billedBy:'Billed by',billedTo:'Billed to',period:'Period',
   subtotal:'Subtotal',gst:'GST',grand:'Grand total',pulled:'Synced from sheet',
   syncFail:'Sheet not reachable — saved on this device',printNow:'Print',
-  bizHead:'Your billing details (one-time)',fGstin:'GSTIN',fPan:'PAN',fAadhaar:'Aadhaar No.',fAcName:'Account holder name',
+  bizHead:'Contractors (one-time entry)',fGstin:'GSTIN',fPan:'PAN',fAadhaar:'Aadhaar No.',fAcName:'Account holder name',
   fBankName:'Bank name',fAcNo:'Account number',fIfsc:'IFSC code',bankDetails:'Bank details',
-  lAcNo:'A/C No.',lIfsc:'IFSC'},
+  lAcNo:'A/C No.',lIfsc:'IFSC',
+  cAdd:'Add contractor',cEdit:'Editing contractor',cName:'Contractor / firm name',cAddr:'Address & phone',cPrefix:'Invoice prefix',
+  cSaveBtn:'Save contractor',cSaved:'Contractor saved for everyone',cDel:'Contractor removed',noContr:'No contractors yet — add one below.',
+  pickContr:'— Select contractor —',addContr:'+ Add / edit contractors',needContr:'Select a contractor first',needCName:'Enter contractor name',
+  sharedNote:'Contractors and company details are shared — every user can pick them on the invoice.',switchUser:'Switch user',
+  gateTitle:'Labour Log access',gateName:'Your name',gatePin:'Access PIN',gateGo:'Open',setUrl:'Set sheet link',
+  badPin:'Wrong PIN',needNameG:'Enter your name',noUrl:'Sheet link not set in the app',
+  invRaised:'Invoices raised (all users)',noInv:'No invoices raised yet.',raisedBy:'by',invLogged:'Invoice saved for everyone'},
  hi:{appName:'लेबर लॉग',tabEntry:'एंट्री',tabRecords:'रिकॉर्ड',tabInvoice:'बिल',
   newEntry:'नई एंट्री',editEntry:'एंट्री में बदलाव',lDate:'तारीख',lOffer:'ऑफर नं.',lCust:'ग्राहक का नाम',
   lLoc:'साइट / लोकेशन',lNum:'लेबर की संख्या',lRate:'प्रति लेबर रेट (₹)',lPurpose:'काम',lNote:'टिप्पणी',
@@ -399,9 +436,16 @@ const T={
   received:'प्राप्तकर्ता के हस्ताक्षर',billedBy:'बिल देने वाला',billedTo:'बिल किसके नाम',period:'अवधि',
   subtotal:'उप-योग',gst:'जीएसटी',grand:'कुल रकम',pulled:'शीट से सिंक हो गया',
   syncFail:'शीट नहीं मिली — डिवाइस में सेव है',printNow:'प्रिंट करें',
-  bizHead:'आपकी बिलिंग जानकारी (एक बार)',fGstin:'GSTIN',fPan:'PAN',fAadhaar:'आधार नं.',fAcName:'खाताधारक का नाम',
+  bizHead:'ठेकेदार (एक बार एंट्री)',fGstin:'GSTIN',fPan:'PAN',fAadhaar:'आधार नं.',fAcName:'खाताधारक का नाम',
   fBankName:'बैंक का नाम',fAcNo:'खाता संख्या',fIfsc:'IFSC कोड',bankDetails:'बैंक विवरण',
-  lAcNo:'खाता सं.',lIfsc:'IFSC'}
+  lAcNo:'खाता सं.',lIfsc:'IFSC',
+  cAdd:'ठेकेदार जोड़ें',cEdit:'ठेकेदार में बदलाव',cName:'ठेकेदार / फर्म का नाम',cAddr:'पता और फोन',cPrefix:'बिल प्रीफिक्स',
+  cSaveBtn:'ठेकेदार सेव करें',cSaved:'ठेकेदार सबके लिए सेव हो गया',cDel:'ठेकेदार हटा दिया',noContr:'अभी कोई ठेकेदार नहीं — नीचे जोड़ें।',
+  pickContr:'— ठेकेदार चुनें —',addContr:'+ ठेकेदार जोड़ें / बदलें',needContr:'पहले ठेकेदार चुनें',needCName:'ठेकेदार का नाम भरें',
+  sharedNote:'ठेकेदार और कंपनी की जानकारी सबके लिए एक है — हर यूज़र बिल पर चुन सकता है।',switchUser:'यूज़र बदलें',
+  gateTitle:'लेबर लॉग एक्सेस',gateName:'आपका नाम',gatePin:'एक्सेस पिन',gateGo:'खोलें',setUrl:'शीट लिंक डालें',
+  badPin:'गलत पिन',needNameG:'अपना नाम भरें',noUrl:'ऐप में शीट लिंक नहीं है',
+  invRaised:'बनाए गए बिल (सभी यूज़र)',noInv:'अभी कोई बिल नहीं बना।',raisedBy:'द्वारा',invLogged:'बिल सबके लिए सेव हो गया'}
 };
 let lang = localStorage.getItem('ll_lang') || 'en';
 const t = k => (T[lang][k] || T.en[k] || k);
@@ -411,10 +455,16 @@ const PULLEY_RATE=1500;
 const pulleyCost=e=>(Number(e.pulleyDays)||0)*PULLEY_RATE;
 const entryAmt=e=>(Number(e.labours)||0)*(Number(e.rate)||0)+pulleyCost(e);
 
+/* ================= ONE SHARED SHEET =================
+   Paste the Apps Script /exec URL here ONCE. Every phone then uses the
+   same sheet automatically — nobody has to set anything up. */
+const SHEET_URL='';
+
 /* ================= state ================= */
 const KEY='lingel_labour_v2', SET='lingel_labour_set';
-let entries=[], editId=null, purpose='Unloading', reason='Work';
-let cfg={url:'',co:'Lingel Windows & Doors Technologies Pvt. Ltd.',prefix:'LBR',used:[],
+let entries=[], editId=null, purpose='Unloading', reason='Work', invoices=[];
+let me={name:localStorage.getItem('ll_user')||'', pin:localStorage.getItem('ll_pin')||''};
+let cfg={url:'',co:'Lingel Windows & Doors Technologies Pvt. Ltd.',prefix:'LBR',used:[],contractors:[],
   gstin:'',pan:'',aadhaar:'',acName:'',bankName:'',acNo:'',ifsc:''};
 
 const $=id=>document.getElementById(id);
@@ -436,15 +486,164 @@ async function persist(){await store(KEY,JSON.stringify(entries));}
 /* ================= sheet backend ================= */
 async function api(payload){
   if(!cfg.url) throw new Error('no url');
+  const body=Object.assign({pin:me.pin,user:me.name},payload);
   const r=await fetch(cfg.url,{method:'POST',redirect:'follow',
     headers:{'Content-Type':'text/plain;charset=utf-8'},   /* simple request → no CORS preflight */
-    body:JSON.stringify(payload)});
-  return await r.json();
+    body:JSON.stringify(body)});
+  const j=await r.json();
+  if(j&&j.error==='pin'){showGate(t('badPin'));throw new Error('pin');}
+  return j;
 }
 function syncLine(){
   const pend=entries.filter(e=>!e.synced).length;
-  $('syncLine').textContent = cfg.url ? t('connected')+(pend?' · '+pend+' '+t('pending'):'') : t('offline');
+  $('syncLine').textContent = (cfg.url ? t('connected')+(pend?' · '+pend+' '+t('pending'):'') : t('offline'))
+    + (me.name?' · '+me.name.toUpperCase():'');
 }
+
+/* ---- common view: the sheet is the master list for everyone ----
+   Replace local data with the sheet's rows (so edits/deletes made on other
+   phones show up), keeping only this phone's not-yet-synced entries. */
+let pulling=false;
+async function pullAll(silent){
+  if(!cfg.url||pulling) return false;
+  pulling=true;
+  try{
+    await pushPending();
+    const r=await api({action:'list'});
+    if(!r.ok){ if(!silent) toast(t('syncFail')); return false; }
+    const local=entries.filter(e=>!e.synced), seen={};
+    const server=(r.entries||[]).map(e=>{e.synced=true;
+      e.labours=Number(e.labours)||0; e.rate=Number(e.rate)||0; e.pulleyDays=Number(e.pulleyDays)||0;
+      e.date=String(e.date||'').slice(0,10); seen[e.id]=1; return e;});
+    entries=server.concat(local.filter(e=>!seen[e.id]));
+    await persist(); monthOptions(); render(); syncLine();
+    if(!silent) toast(t('pulled'));
+    return true;
+  }catch(e){ if(!silent&&e.message!=='pin') toast(t('syncFail')); return false; }
+  finally{ pulling=false; }
+}
+
+/* ---- shared settings + invoice register (same for every user) ---- */
+const SHARED=['co','prefix','contractors'];
+const CF=['name','addr','gstin','pan','aadhaar','acName','bankName','acNo','ifsc','prefix'];
+const curContr=()=>(cfg.contractors||[]).find(c=>c.id===$('i_contr').value)||null;
+/* old single "billing details" → first contractor, so nothing typed earlier is lost */
+function migrateOld(){
+  cfg.contractors=Array.isArray(cfg.contractors)?cfg.contractors:[];
+  if(!cfg.contractors.length && (cfg.gstin||cfg.pan||cfg.acNo||cfg.acName)){
+    cfg.contractors.push({id:'c'+Date.now().toString(36),name:cfg.acName||'Contractor 1',addr:'',
+      gstin:cfg.gstin||'',pan:cfg.pan||'',aadhaar:cfg.aadhaar||'',acName:cfg.acName||'',
+      bankName:cfg.bankName||'',acNo:cfg.acNo||'',ifsc:cfg.ifsc||'',prefix:''});
+    return true;
+  }
+  return false;
+}
+function contrOptions(){
+  const sel=$('i_contr'); if(!sel) return;
+  const keep=(sel.value&&sel.value!=='__add')?sel.value:(localStorage.getItem('ll_contr')||'');
+  const cs=cfg.contractors||[];
+  sel.innerHTML=`<option value="">${t('pickContr')}</option>`+
+    cs.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')+
+    `<option value="__add">${t('addContr')}</option>`;
+  sel.value=cs.some(c=>c.id===keep)?keep:(cs.length===1?cs[0].id:'');
+  contrInfo();
+}
+function contrInfo(){
+  const c=curContr(), box=$('i_contr_info'); if(!box) return;
+  box.innerHTML=c?esc([c.addr,c.gstin?'GSTIN '+c.gstin:'',c.acNo?(c.bankName+' A/C '+c.acNo):''].filter(Boolean).join(' · ')):'';
+}
+function renderContractors(){
+  const cs=cfg.contractors||[];
+  $('cList').innerHTML=cs.length?cs.map(c=>`<div class="row" style="padding:9px 12px;margin-bottom:6px">
+     <div class="r1"><span class="cust" style="margin:0">${esc(c.name)}</span><span class="tag">${esc(c.prefix||cfg.prefix||'LBR')}</span></div>
+     <div class="meta">${esc([c.gstin,c.acNo?('A/C '+c.acNo):''].filter(Boolean).join(' · '))}</div>
+     <div class="acts"><button onclick="editContr('${c.id}')">${t('edit')}</button>
+       <button class="del" onclick="delContr('${c.id}')">${t('del')}</button></div></div>`).join('')
+    :`<div class="empty" style="padding:14px">${t('noContr')}</div>`;
+}
+let cEditId=null;
+const CIN={name:'cName',addr:'cAddr',gstin:'bGstin',pan:'bPan',aadhaar:'bAadhaar',acName:'bAcName',
+  bankName:'bBankName',acNo:'bAcNo',ifsc:'bIfsc',prefix:'cPrefix'};
+function clearContrForm(){cEditId=null;CF.forEach(k=>$(CIN[k]).value='');
+  $('cFormTitle').textContent=t('cAdd');$('cCancel').classList.add('hide');}
+function editContr(id){const c=(cfg.contractors||[]).find(x=>x.id===id);if(!c)return;cEditId=id;
+  CF.forEach(k=>$(CIN[k]).value=c[k]||'');$('cFormTitle').textContent=t('cEdit');$('cCancel').classList.remove('hide');
+  $('cName').scrollIntoView({behavior:'smooth',block:'center'});}
+async function pushShared(){
+  await store(SET,JSON.stringify(cfg));
+  if(!cfg.url) return true;
+  try{const sh={};SHARED.forEach(k=>sh[k]=cfg[k]);const r=await api({action:'setConfig',config:sh});return !!r.ok;}
+  catch(e){return false;}
+}
+async function delContr(id){
+  const c=(cfg.contractors||[]).find(x=>x.id===id); if(!c||!confirm(t('del')+' '+c.name+' ?')) return;
+  cfg.contractors=cfg.contractors.filter(x=>x.id!==id);
+  if(cEditId===id) clearContrForm();
+  renderContractors(); contrOptions(); toast((await pushShared())?t('cDel'):t('syncFail'));
+}
+window.editContr=editContr; window.delContr=delContr;
+$('cSave').onclick=async()=>{
+  const c={id:cEditId||('c'+Date.now().toString(36)+Math.random().toString(36).slice(2,4))};
+  CF.forEach(k=>c[k]=$(CIN[k]).value.trim());
+  ['gstin','pan','ifsc','prefix'].forEach(k=>c[k]=c[k].toUpperCase());
+  c.prefix=c.prefix.replace(/\/+$/,'');
+  if(!c.name){toast(t('needCName'));return;}
+  cfg.contractors=(cfg.contractors||[]).filter(x=>x.id!==c.id).concat(c);
+  clearContrForm(); renderContractors(); contrOptions();
+  toast((await pushShared())?t('cSaved'):t('syncFail'));
+};
+$('cCancel').onclick=clearContrForm;
+$('i_contr').onchange=()=>{
+  if($('i_contr').value==='__add'){ $('i_contr').value=''; contrInfo(); openSettings(); return; }
+  localStorage.setItem('ll_contr',$('i_contr').value); contrInfo(); refreshInvNo();
+};
+async function loadShared(){
+  if(!cfg.url) return;
+  try{
+    const r=await api({action:'config'});
+    if(!r.ok) return;
+    const c=r.config||{};
+    SHARED.forEach(k=>{ if(c[k]!=null && c[k]!=='') cfg[k]=c[k]; });
+    if(typeof cfg.contractors==='string'){try{cfg.contractors=JSON.parse(cfg.contractors);}catch(e){cfg.contractors=[];}}
+    if(!Array.isArray(c.contractors)||!c.contractors.length){ if(migrateOld()) pushShared(); }
+    contrOptions(); renderContractors();
+    invoices=r.invoices||[];
+    cfg.used=[...new Set((cfg.used||[]).concat(invoices.map(i=>i.no)))];
+    await store(SET,JSON.stringify(cfg));
+    refreshInvNo(); renderInvList();
+  }catch(e){}
+}
+function renderInvList(){
+  const box=$('invList'); if(!box) return;
+  if(!invoices.length){box.innerHTML=`<div class="empty" style="padding:16px">${t('noInv')}</div>`;return;}
+  box.innerHTML=invoices.slice().reverse().slice(0,30).map(i=>`<div class="row" style="padding:9px 12px">
+    <div class="r1"><span class="offer">${esc(i.no)}</span><span class="cost">${money(i.amount)}</span></div>
+    <div class="meta"><span>${esc(String(i.date||'').slice(0,10))}</span>
+      ${i.period?`<span class="tag">${esc(periodLabel(i.period))}</span>`:''}
+      ${i.by?`<span>${t('raisedBy')} ${esc(i.by)}</span>`:''}</div></div>`).join('');
+}
+
+/* ---- one access: name + common PIN, checked by the sheet backend ---- */
+function showGate(err){
+  $('gName').value=me.name; $('gPin').value='';
+  $('gErr').textContent=err||'';
+  $('gUrlWrap').classList.toggle('hide',!!cfg.url);
+  $('gate').classList.add('on');
+}
+$('gGo').onclick=async()=>{
+  const n=$('gName').value.trim(), p=$('gPin').value.trim();
+  if(!n){$('gErr').textContent=t('needNameG');return;}
+  if(!cfg.url){$('gErr').textContent=t('noUrl');return;}
+  me={name:n,pin:p};
+  try{
+    const r=await api({action:'ping'});
+    if(!r.ok){$('gErr').textContent=t('syncFail');return;}
+  }catch(e){ if(e.message!=='pin') $('gErr').textContent=t('syncFail'); return; }
+  localStorage.setItem('ll_user',n); localStorage.setItem('ll_pin',p);
+  $('gate').classList.remove('on'); syncLine();
+  await loadShared(); await pullAll(true);
+};
+$('gUrl').onclick=()=>{ $('gate').classList.remove('on'); openSettings(); };
 async function pushOne(e){
   if(!cfg.url) return;
   try{const r=await api({action:'save',entry:e});
@@ -458,16 +657,7 @@ async function pushPending(){
 }
 $('pull').onclick=async()=>{
   if(!cfg.url){toast(t('needSheet'));return;}
-  try{
-    const r=await api({action:'list'});
-    if(r.ok){
-      const byId={};
-      entries.forEach(e=>byId[e.id]=e);
-      r.entries.forEach(e=>{e.synced=true;byId[e.id]=e;});
-      entries=Object.values(byId);
-      await persist();monthOptions();render();syncLine();toast(t('pulled'));
-    } else toast(t('syncFail'));
-  }catch(e){toast(t('syncFail'));}
+  await loadShared(); await pullAll(false);
 };
 
 /* ================= dictation ================= */
@@ -521,7 +711,8 @@ $('save').onclick=async()=>{
     location:$('f_loc').value.trim(), labours:parseInt($('f_num').value,10)||0,
     rate:parseFloat($('f_rate').value)||0, purpose:purpose, reason:reason,
     pulleyDays: $('f_pulley').checked ? Math.max(1,parseInt($('f_pulley_days').value,10)||1) : 0,
-    note:$('f_note').value.trim(), synced:false
+    note:$('f_note').value.trim(), synced:false,
+    by: (editId && (entries.find(x=>x.id===editId)||{}).by) || me.name
   };
   e.period = e.date ? periodOf(e.date) : '';
   if(!e.date){toast(t('needDate'));return;}
@@ -618,6 +809,7 @@ function render(){
           ${e.pulleyDays?`<span class="tag" style="border-color:#e2f14d;color:#e2f14d">⛓ ${t('pulleyTag')} ${e.pulleyDays>1?('× '+e.pulleyDays+'d'):''} · ${money(pulleyCost(e))}</span>`:''}
           <span>${e.labours} × ${money(e.rate)}</span>
           ${e.location?`<span>· ${esc(e.location)}</span>`:''}
+          ${e.by?`<span>· 👤 ${esc(e.by)}</span>`:''}
         </div>
         ${e.note?`<div class="note">${esc(e.note)}</div>`:''}
         <div class="acts">
@@ -700,7 +892,8 @@ $('printReg').onclick=()=>{
    A second invoice raised in the same fortnight becomes …07A-2, then -3. */
 function autoInvNo(period){
   if(!period) return '';
-  const base=(cfg.prefix||'LBR')+'/'+period.slice(0,4)+'/'+period.slice(5,7)+period.slice(-1);
+  const cc=curContr();
+  const base=((cc&&cc.prefix)||cfg.prefix||'LBR')+'/'+period.slice(0,4)+'/'+period.slice(5,7)+period.slice(-1);
   const used=cfg.used||[];
   if(!used.includes(base)) return base;
   let n=2;
@@ -740,19 +933,20 @@ function buildInvoice(){
   const pulleySub=rows.reduce((s2,e)=>s2+pulleyCost(e),0);
   const sub=labourSub+pulleySub;
   const gp=parseFloat($('i_gst').value)||0, gst=sub*gp/100, grand=sub+gst;
-  const bankLine=(cfg.acName||cfg.bankName||cfg.acNo||cfg.ifsc)
+  const C=curContr()||{};
+  const bankLine=(C.acName||C.bankName||C.acNo||C.ifsc)
     ? `<div class="words" style="margin-top:6px"><b>${t('bankDetails')}:</b> `
-      + [cfg.acName?esc(cfg.acName):'', cfg.bankName?esc(cfg.bankName):'',
-         cfg.acNo?(t('lAcNo')+' '+esc(cfg.acNo)):'', cfg.ifsc?(t('lIfsc')+' '+esc(cfg.ifsc)):'']
+      + [C.acName?esc(C.acName):'', C.bankName?esc(C.bankName):'',
+         C.acNo?(t('lAcNo')+' '+esc(C.acNo)):'', C.ifsc?(t('lIfsc')+' '+esc(C.ifsc)):'']
         .filter(Boolean).join(' · ') + `</div>`
     : '';
-  const aadhaarLine = cfg.aadhaar
-    ? `<div class="words" style="margin-top:6px"><b>${t('fAadhaar')}:</b> ${esc(cfg.aadhaar)}</div>`
+  const aadhaarLine = C.aadhaar
+    ? `<div class="words" style="margin-top:6px"><b>${t('fAadhaar')}:</b> ${esc(C.aadhaar)}</div>`
     : '';
   return docHead(t('invTitle'),
       `${t('iNo')}: ${esc($('i_no').value)||'—'}<br>${t('iDate')}: ${$('i_date').value||new Date().toISOString().slice(0,10)}`)
     + `<div class="binfo">
-        <div style="flex:1"><b>${t('billedBy')}</b>${esc($('i_from').value)||'—'}${cfg.gstin?`<br>${t('fGstin')}: ${esc(cfg.gstin)}`:''}${cfg.pan?`<br>${t('fPan')}: ${esc(cfg.pan)}`:''}</div>
+        <div style="flex:1"><b>${t('billedBy')}</b>${esc(C.name)||'—'}${C.addr?`<br>${esc(C.addr)}`:''}${C.gstin?`<br>${t('fGstin')}: ${esc(C.gstin)}`:''}${C.pan?`<br>${t('fPan')}: ${esc(C.pan)}`:''}</div>
         <div style="flex:1"><b>${t('billedTo')}</b>${esc($('i_to').value)||'—'}
           ${$('i_po').value?`<br><br><b>${t('iPo')}</b>${esc($('i_po').value)}`:''}</div>
         <div style="flex:0 0 auto;text-align:right"><b>${t('period')}</b>${$('i_month').value?periodLabel($('i_month').value):'—'}</div>
@@ -770,13 +964,25 @@ function buildInvoice(){
     + `<div class="sig"><div>${t('prepared')}</div><div>${t('approved')}</div><div>${t('received')}</div></div>`;
 }
 $('genInv').onclick=()=>{
+  if(!curContr()){toast(t('needContr'));return;}
   const html=buildInvoice();
   if(!html){toast(t('nothing'));return;}
   $('invPreview').innerHTML=`<div class="paper" id="invLive">${html}</div>
     <button class="btn" id="printInv">${t('printNow')}</button>`;
   $('printInv').onclick=async()=>{
     $('printArea').innerHTML=`<div class="paper">${buildInvoice()}</div>`;
-    await markUsed($('i_no').value.trim());
+    const no=$('i_no').value.trim(), rows=invRows();
+    const sub=rows.reduce((s2,e)=>s2+entryAmt(e),0), gp=parseFloat($('i_gst').value)||0;
+    await markUsed(no);
+    if(cfg.url&&no){
+      try{
+        const r=await api({action:'logInvoice',invoice:{no,date:$('i_date').value,period:$('i_month').value,
+          purpose:$('i_purpose').value,reason:$('i_reason').value,filter:$('i_filter').value.trim(),
+          billedBy:(curContr()||{}).name||'',billedTo:$('i_to').value.trim(),entries:rows.length,
+          subtotal:sub,gst:gp,amount:Math.round(sub*(1+gp/100)),by:me.name}});
+        if(r.ok){ toast(t('invLogged')); await loadShared(); }
+      }catch(e){}
+    }
     window.print();
     $('i_no').readOnly=true; delete $('i_no').dataset.manual; refreshInvNo();
   };
@@ -786,9 +992,7 @@ $('genInv').onclick=()=>{
 /* ================= settings + language ================= */
 function openSettings(){
   $('sheetUrl').value=cfg.url;$('coName').value=cfg.co;$('coPrefix').value=cfg.prefix||'LBR';
-  $('bGstin').value=cfg.gstin||'';$('bPan').value=cfg.pan||'';$('bAadhaar').value=cfg.aadhaar||'';
-  $('bAcName').value=cfg.acName||'';$('bBankName').value=cfg.bankName||'';
-  $('bAcNo').value=cfg.acNo||'';$('bIfsc').value=cfg.ifsc||'';
+  clearContrForm(); renderContractors();
   $('setModal').classList.add('on');
 }
 $('gear').onclick=openSettings;
@@ -797,20 +1001,22 @@ $('saveSet').onclick=async()=>{
   cfg.url=$('sheetUrl').value.trim();
   cfg.co=$('coName').value.trim()||cfg.co;
   cfg.prefix=($('coPrefix').value.trim()||'LBR').replace(/\/+$/,'');
-  cfg.gstin=$('bGstin').value.trim().toUpperCase();
-  cfg.pan=$('bPan').value.trim().toUpperCase();
-  cfg.aadhaar=$('bAadhaar').value.trim();
-  cfg.acName=$('bAcName').value.trim();
-  cfg.bankName=$('bBankName').value.trim();
-  cfg.acNo=$('bAcNo').value.trim();
-  cfg.ifsc=$('bIfsc').value.trim().toUpperCase();
   await store(SET,JSON.stringify(cfg));
   refreshInvNo();
   $('setModal').classList.remove('on'); syncLine();
   if(cfg.url){
-    try{const r=await api({action:'ping'}); toast(r.ok?t('connected'):t('syncFail')); if(r.ok) pushPending();}
-    catch(e){toast(t('syncFail'));}
+    if(!me.name){showGate();return;}
+    try{
+      const shared={}; SHARED.forEach(k=>shared[k]=cfg[k]);
+      const r=await api({action:'setConfig',config:shared});
+      toast(r.ok?t('connected'):t('syncFail'));
+      if(r.ok){ await pullAll(true); }
+    }catch(e){ if(e.message!=='pin') toast(t('syncFail')); }
   }
+};
+$('switchUser').onclick=()=>{
+  localStorage.removeItem('ll_user'); localStorage.removeItem('ll_pin'); me={name:'',pin:''};
+  $('setModal').classList.remove('on'); syncLine(); showGate();
 };
 function applyLang(){
   document.documentElement.lang=lang;
@@ -822,7 +1028,7 @@ function applyLang(){
   $('f_note').placeholder = lang==='en' ? 'Contractor, vehicle, floor…' : 'ठेकेदार, गाड़ी, फ्लोर…';
   $('formTitle').textContent = editId ? t('editEntry') : t('newEntry');
   $('save').textContent = editId ? t('updateEntry') : t('saveEntry');
-  syncLine(); monthOptions(); render();
+  syncLine(); monthOptions(); contrOptions(); renderContractors(); render();
 }
 $('langBtn').onclick=()=>{lang = lang==='en'?'hi':'en'; localStorage.setItem('ll_lang',lang); applyLang();};
 
@@ -833,12 +1039,14 @@ $('langBtn').onclick=()=>{lang = lang==='en'?'hi':'en'; localStorage.setItem('ll
   $('coName').value=cfg.co;
   $('i_date').value=new Date().toISOString().slice(0,10);
   $('coPrefix').value=cfg.prefix||'LBR';
-  resetForm(); applyLang(); refreshInvNo();
-  if(!cfg.gstin && !cfg.pan && !cfg.acNo && !localStorage.getItem('ll_bizsetup')){
-    localStorage.setItem('ll_bizsetup','1'); openSettings();
-  }
-  if(cfg.url) pushPending();
-  window.addEventListener('online',pushPending);
+  if(SHEET_URL) cfg.url=SHEET_URL;          /* one link for everyone */
+  migrateOld(); contrOptions(); resetForm(); applyLang(); refreshInvNo(); renderInvList();
+  if(!me.name || !cfg.url){ showGate(); }
+  else { await loadShared(); await pullAll(true); }
+  /* keep the common view fresh */
+  window.addEventListener('online',()=>pullAll(true));
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&me.name) pullAll(true); });
+  setInterval(()=>{ if(!document.hidden&&me.name&&!editId) pullAll(true); },60000);
 })();
 </script>
 </body>
