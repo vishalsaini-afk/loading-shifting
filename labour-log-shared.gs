@@ -12,7 +12,8 @@
 
    What it adds:
    • one common Access PIN for everyone (set LL_ACCESS_PIN below)
-   • shared billing details (company, GSTIN, PAN, bank…) — same on every phone
+   • shared contractor list (name, GSTIN, PAN, Aadhaar, bank…) — entered once,
+     picked from a dropdown on the invoice by any user
    • a shared invoice register ("Labour Invoices" tab) so invoice numbers
      never clash, whoever raises the invoice
    Your existing entry sheet and columns are untouched.
@@ -41,8 +42,12 @@ function llShared_(e) {
   }
 
   if (b.action === 'setConfig') {
-    var keep = ['co','prefix','gstin','pan','aadhaar','acName','bankName','acNo','ifsc'], c = {};
-    keep.forEach(function (k) { c[k] = String((b.config || {})[k] || ''); });
+    var src = b.config || {}, c = { co: String(src.co || ''), prefix: String(src.prefix || '') };
+    // contractor list — entered once, picked on every invoice
+    var F = ['id','name','addr','gstin','pan','aadhaar','acName','bankName','acNo','ifsc','prefix'];
+    c.contractors = (Array.isArray(src.contractors) ? src.contractors : []).map(function (x) {
+      var o = {}; F.forEach(function (k) { o[k] = String((x || {})[k] || ''); }); return o;
+    }).filter(function (o) { return o.id && o.name; });
     props.setProperty('LL_CONFIG', JSON.stringify(c));
     return llOut_({ ok: true, config: c });
   }
