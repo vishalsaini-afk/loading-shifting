@@ -1081,7 +1081,7 @@ function invRows(all){
   const pd=$('i_month').value, p=$('i_purpose').value,
         rs=$('i_reason').value, f=$('i_filter').value.toLowerCase().trim();
   return entries.filter(e=>{
-    if(!all && cfg.url && e.verified!==true) return false;   /* only supervisor-verified work is billed */
+    if(!all && e.verified===false) return false;   /* only entries the sheet marks as waiting are held back */
     if(pd&&periodOf(e.date)!==pd) return false;
     if(p&&e.purpose!==p) return false;
     if(rs&&(e.reason||'Work')!==rs) return false;
