@@ -323,16 +323,18 @@ function llWriteEntry_(m, x, opts) {
 /* ============================ REQUESTS TAB ============================ */
 var LL_REQ_HEAD = ['Request ID', 'Raised At', 'Supervisor', 'Offer No', 'Customer', 'Location', 'Date Needed',
   'Labours', 'Purpose', 'Reason', 'Pulleys', 'Pulley Days', 'Priority', 'Remarks', 'Status', 'Decided By',
-  'Decided At', 'Rate', 'Reject Reason', 'Entry ID', 'Resends', 'History'];
+  'Decided At', 'Rate', 'Reject Reason', 'Entry ID', 'Resends', 'History', 'Map Link'];
 var LL_REQ_KEYS = ['id', 'raisedAt', 'sup', 'offer', 'customer', 'location', 'date', 'labours', 'purpose', 'reason',
   'pulleys', 'pulleyDays', 'priority', 'note', 'status', 'decidedBy', 'decidedAt', 'rate', 'rejectReason',
-  'entryId', 'resends', 'history'];
+  'entryId', 'resends', 'history', 'mapLink'];
 
 function llReqSheet_() {
   var ss = llSS_(), sh = ss.getSheetByName(LL_REQ_TAB);
   if (!sh) {
-    sh = ss.insertSheet(LL_REQ_TAB); sh.getRange('A:V').setNumberFormat('@');
+    sh = ss.insertSheet(LL_REQ_TAB); sh.getRange('A:W').setNumberFormat('@');
     sh.getRange(1, 1, 1, LL_REQ_HEAD.length).setValues([LL_REQ_HEAD]); sh.setFrozenRows(1);
+  } else if (String(sh.getRange(1, 23).getDisplayValue()) !== 'Map Link') {
+    sh.getRange(1, 23).setValue('Map Link');
   }
   return sh;
 }
@@ -357,11 +359,18 @@ function llCleanReq_(r) {
     purpose: r.purpose === 'Shifting' ? 'Shifting' : 'Unloading', reason: r.reason === 'Rework' ? 'Rework' : 'Work',
     pulleys: String(Math.max(0, parseInt(r.pulleys, 10) || 0)), pulleyDays: String(Math.max(0, parseInt(r.pulleyDays, 10) || 0)),
     priority: ['Urgent', 'High', 'Normal'].indexOf(r.priority) > -1 ? r.priority : 'Normal',
-    note: String(r.note || '').slice(0, 500)
+    note: String(r.note || '').slice(0, 500),
+    mapLink: llMapLink_(r.mapLink)
   };
   if (!/^\d{3,}/.test(o.offer)) return { error: 'Offer No is required (must start with a number)' };
   if (Number(o.labours) < 1) return { error: 'Enter no. of labours' };
   return o;
+}
+
+// keep only a real web link (first http/https URL found in what was pasted)
+function llMapLink_(x) {
+  var m = String(x || '').match(/https?:\/\/[^\s<>"']+/i);
+  return m ? m[0].slice(0, 500) : '';
 }
 
 /* ============================ CONTRACTORS TAB ============================ */

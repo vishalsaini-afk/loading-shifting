@@ -432,7 +432,7 @@ const T={
   stApproved:'Approved',stRejected:'Rejected',neededOn:'Needed',resent:'resent',
   verified:'Verified',awaitSup:'Awaiting supervisor',fromReq:'Request',
   unbilled:'entries are waiting for supervisor verification and are not on this invoice',
-  needOnline:'Connect to the sheet to get the bill no.',reasonLocked:'Reason confirmed by supervisor',
+  needOnline:'Connect to the sheet to get the bill no.',openMap:'Open site location on map',reasonLocked:'Reason confirmed by supervisor',
   cSaveBtn:'Save contractor',cSaved:'Contractor saved for everyone',cDel:'Contractor removed',noContr:'No contractors yet — add one below.',
   pickContr:'— Select contractor —',addContr:'+ Add / edit contractors',needContr:'Select a contractor first',needCName:'Enter contractor name',
   sharedNote:'Contractors and company details are shared — every user can pick them on the invoice.',switchUser:'Switch user',
@@ -483,7 +483,7 @@ const T={
   stApproved:'मंज़ूर',stRejected:'रिजेक्ट',neededOn:'कब चाहिए',resent:'दोबारा भेजा',
   verified:'जाँच हुई',awaitSup:'सुपरवाइज़र जाँच बाकी',fromReq:'रिक्वेस्ट',
   unbilled:'एंट्री सुपरवाइज़र की जाँच के इंतज़ार में हैं, इस बिल में नहीं हैं',
-  needOnline:'बिल नं. के लिए शीट से जुड़ें',reasonLocked:'कारण सुपरवाइज़र ने तय किया',
+  needOnline:'बिल नं. के लिए शीट से जुड़ें',openMap:'साइट की लोकेशन मैप पर खोलें',reasonLocked:'कारण सुपरवाइज़र ने तय किया',
   cSaveBtn:'ठेकेदार सेव करें',cSaved:'ठेकेदार सबके लिए सेव हो गया',cDel:'ठेकेदार हटा दिया',noContr:'अभी कोई ठेकेदार नहीं — नीचे जोड़ें।',
   pickContr:'— ठेकेदार चुनें —',addContr:'+ ठेकेदार जोड़ें / बदलें',needContr:'पहले ठेकेदार चुनें',needCName:'ठेकेदार का नाम भरें',
   sharedNote:'ठेकेदार और कंपनी की जानकारी सबके लिए एक है — हर यूज़र बिल पर चुन सकता है।',switchUser:'यूज़र बदलें',
@@ -725,6 +725,7 @@ function renderRequests(){
         <span>📅 ${t('neededOn')} ${esc(q.date)||'—'}</span>
         ${q.location?`<span>📍 ${esc(q.location)}</span>`:''}
       </div>
+      ${/^https?:\/\//i.test(q.mapLink||'')?`<a class="btn ghost" style="display:block;text-align:center;text-decoration:none;margin-top:8px;padding:10px;color:var(--hi);border-color:var(--hi)" href="${esc(q.mapLink)}" target="_blank" rel="noopener">🗺 ${t('openMap')}</a>`:''}
       <div class="meta" style="margin-top:4px">👤 ${esc(q.sup)} · ${esc(q.raisedAt)}${Number(q.resends)?` · ↻ ${t('resent')} ${esc(q.resends)}×`:''}</div>
       ${q.note?`<div class="note">${esc(q.note)}</div>`:''}
       <div class="reqact">
