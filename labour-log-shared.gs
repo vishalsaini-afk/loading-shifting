@@ -15,6 +15,8 @@
    • shared contractor list in a "Labour Contractors" tab (name, GSTIN, PAN,
      Aadhaar, bank…) — entered once, picked on the invoice; edit it in the
      sheet or the app, both stay in step
+   • chain pulley details per entry in a "Labour Pulley" tab (no. of pulleys,
+     days, amount) — edit there and the app follows
    • a shared invoice register ("Labour Invoices" tab) so invoice numbers
      never clash; delete a row there and that number is free again
    Your existing entry sheet and columns are untouched.
@@ -77,6 +79,28 @@ function llShared_(e) {
     } finally { lock.releaseLock(); }
   }
 
+  if (b.action === 'saveExtras') {
+    var lk2 = LockService.getScriptLock(); lk2.waitLock(20000);
+    try {
+      var sh = llExtraSheet_(), v = sh.getDataRange().getValues(), row = {};
+      for (var r = 1; r < v.length; r++) row[String(v[r][0])] = r + 1;
+      (b.items || []).forEach(function (it) {
+        var vals = [[String(it.id), String(it.offer || ''), String(it.date || ''),
+                     Number(it.pulleys) || 0, Number(it.pulleyDays) || 0,
+                     (Number(it.pulleys) || 0) * (Number(it.pulleyDays) || 0) * 1500, String(it.by || '')]];
+        if (row[it.id]) sh.getRange(row[it.id], 1, 1, 7).setValues(vals);
+        else { sh.appendRow(vals[0]); row[it.id] = sh.getLastRow(); }
+      });
+    } finally { lk2.releaseLock(); }
+    return llOut_({ ok: true });
+  }
+
+  if (b.action === 'extras') {
+    var ev = llExtraSheet_().getDataRange().getValues(), ex = {};
+    for (var q = 1; q < ev.length; q++) if (ev[q][0]) ex[String(ev[q][0])] = { pulleys: Number(ev[q][3]) || 0, pulleyDays: Number(ev[q][4]) || 0, by: String(ev[q][6] || '') };
+    return llOut_({ ok: true, extras: ex });
+  }
+
   return null;   // anything else → your existing doPost code handles it
 }
 
@@ -110,6 +134,18 @@ function llWriteContr_(list) {
   if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, LL_CONTR_HEAD.length).clearContent();
   var rows = (list || []).map(function (x) { return LL_CONTR_KEYS.map(function (k) { return String((x || {})[k] || ''); }); });
   if (rows.length) sh.getRange(2, 1, rows.length, LL_CONTR_HEAD.length).setNumberFormat('@').setValues(rows);
+}
+
+/* ---- chain pulley per entry: edit No. of Pulleys / Days here and the app follows ---- */
+var LL_EXTRA_TAB = 'Labour Pulley';
+function llExtraSheet_() {
+  var ss = llSS_(), sh = ss.getSheetByName(LL_EXTRA_TAB);
+  if (!sh) {
+    sh = ss.insertSheet(LL_EXTRA_TAB);
+    sh.appendRow(['Entry ID','Offer No','Date','No. of Pulleys','Pulley Days','Pulley Amount (₹)','Logged By']);
+    sh.setFrozenRows(1); sh.getRange('A:C').setNumberFormat('@');
+  }
+  return sh;
 }
 
 function llSS_() { return LL_SS_ID ? SpreadsheetApp.openById(LL_SS_ID) : SpreadsheetApp.getActiveSpreadsheet(); }

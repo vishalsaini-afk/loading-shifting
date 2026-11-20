@@ -193,9 +193,12 @@
             <input type="checkbox" id="f_pulley" style="width:20px;height:20px;accent-color:#e2f14d;flex:none">
             <span data-t="lPulley">Chain pulley (₹1,500/day)</span>
           </label>
-          <div id="pulleyDaysWrap" class="hide" style="margin-top:10px;max-width:180px">
-            <label data-t="lPulleyDays">Days used</label>
-            <input type="number" id="f_pulley_days" min="1" step="1" value="1">
+          <div id="pulleyDaysWrap" class="hide grid" style="margin-top:10px;max-width:360px">
+            <div><label data-t="lPulleyNo">No. of pulleys</label>
+              <input type="number" id="f_pulley_no" min="1" step="1" value="1"></div>
+            <div><label data-t="lPulleyDays">Days used</label>
+              <input type="number" id="f_pulley_days" min="1" step="1" value="1"></div>
+            <div class="full hint" id="pulleyCalc"></div>
           </div>
         </div>
 
@@ -363,7 +366,7 @@ const T={
  en:{appName:'Labour Log',tabEntry:'Entry',tabRecords:'Records',tabInvoice:'Invoice',
   newEntry:'New entry',editEntry:'Editing entry',lDate:'Date',lOffer:'Offer no.',lCust:'Customer name',
   lLoc:'Location',lNum:'No. of labours',lRate:'Rate per labour (₹)',lPurpose:'Purpose',lNote:'Remarks',
-  lPulley:'Chain pulley (₹1,500/day)',lPulleyDays:'Days used',pulleyTag:'Chain pulley',
+  lPulley:'Chain pulley (₹1,500 per pulley per day)',lPulleyDays:'Days used',lPulleyNo:'No. of pulleys',pulleyTag:'Chain pulley',
   labourCharges:'Labour charges',pulleyCharges:'Chain pulley',
   unloading:'Unloading',shifting:'Shifting',lReason:'Reason',work:'Work',rework:'Rework',
   bothReason:'Work + Rework',allPeriods:'All periods',h1:'1–15',h2:'16–end',cReason:'Reason',
@@ -406,7 +409,7 @@ const T={
  hi:{appName:'लेबर लॉग',tabEntry:'एंट्री',tabRecords:'रिकॉर्ड',tabInvoice:'बिल',
   newEntry:'नई एंट्री',editEntry:'एंट्री में बदलाव',lDate:'तारीख',lOffer:'ऑफर नं.',lCust:'ग्राहक का नाम',
   lLoc:'साइट / लोकेशन',lNum:'लेबर की संख्या',lRate:'प्रति लेबर रेट (₹)',lPurpose:'काम',lNote:'टिप्पणी',
-  lPulley:'चेन पुली (₹1,500/दिन)',lPulleyDays:'कितने दिन',pulleyTag:'चेन पुली',
+  lPulley:'चेन पुली (₹1,500 प्रति पुली प्रति दिन)',lPulleyDays:'कितने दिन',lPulleyNo:'कितनी पुली',pulleyTag:'चेन पुली',
   labourCharges:'लेबर चार्ज',pulleyCharges:'चेन पुली',
   unloading:'अनलोडिंग',shifting:'शिफ्टिंग',lReason:'कारण',work:'काम',rework:'री-वर्क',
   bothReason:'काम + री-वर्क',allPeriods:'सभी अवधि',h1:'1–15',h2:'16–अंत',cReason:'कारण',
@@ -452,7 +455,9 @@ const t = k => (T[lang][k] || T.en[k] || k);
 
 /* chain pulley: fixed ₹1500 per day, added on top of labour charges */
 const PULLEY_RATE=1500;
-const pulleyCost=e=>(Number(e.pulleyDays)||0)*PULLEY_RATE;
+const pulleyNo=e=>(Number(e.pulleyDays)||0)?Math.max(1,Number(e.pulleys)||1):0;   /* old entries = 1 pulley */
+const pulleyCost=e=>(Number(e.pulleyDays)||0)*pulleyNo(e)*PULLEY_RATE;
+const pulleyTxt=e=>(pulleyNo(e)>1?pulleyNo(e)+' × ':'')+(Number(e.pulleyDays)>1||pulleyNo(e)>1?e.pulleyDays+'d':'');
 const entryAmt=e=>(Number(e.labours)||0)*(Number(e.rate)||0)+pulleyCost(e);
 
 /* ================= ONE SHARED SHEET =================
@@ -513,9 +518,12 @@ async function pullAll(silent){
     const r=await api({action:'list'});
     if(!r.ok){ if(!silent) toast(t('syncFail')); return false; }
     const local=entries.filter(e=>!e.synced), seen={};
+    let X={}; try{const x=await api({action:'extras'}); if(x&&x.ok) X=x.extras||{};}catch(err){}
     const server=(r.entries||[]).map(e=>{e.synced=true;
-      e.labours=Number(e.labours)||0; e.rate=Number(e.rate)||0; e.pulleyDays=Number(e.pulleyDays)||0;
-      e.date=String(e.date||'').slice(0,10); seen[e.id]=1; return e;});
+      e.labours=Number(e.labours)||0; e.rate=Number(e.rate)||0; e.pulleyDays=Number(e.pulleyDays)||0; e.pulleys=Number(e.pulleys)||(e.pulleyDays?1:0);
+      e.date=String(e.date||'').slice(0,10); seen[e.id]=1;
+      const x=X[e.id]; if(x){ e.pulleyDays=Number(x.pulleyDays)||0; e.pulleys=e.pulleyDays?Math.max(1,Number(x.pulleys)||1):0; if(x.by) e.by=x.by; }
+      return e;});
     entries=server.concat(local.filter(e=>!seen[e.id]));
     await persist(); monthOptions(); render(); syncLine();
     if(!silent) toast(t('pulled'));
@@ -648,13 +656,18 @@ $('gUrl').onclick=()=>{ $('gate').classList.remove('on'); openSettings(); };
 async function pushOne(e){
   if(!cfg.url) return;
   try{const r=await api({action:'save',entry:e});
-    if(r.ok){e.synced=true;await persist();syncLine();render();}}catch(err){}
+    if(r.ok){await saveExtras([e]); e.synced=true;await persist();syncLine();render();}}catch(err){}
+}
+/* pulley details + who logged it → "Labour Pulley" tab (works whatever the old save script keeps) */
+async function saveExtras(list){
+  try{await api({action:'saveExtras',items:list.map(e=>({id:e.id,offer:e.offer||'',date:e.date||'',
+    pulleys:pulleyNo(e),pulleyDays:Number(e.pulleyDays)||0,by:e.by||''}))});}catch(x){}
 }
 async function pushPending(){
   const pend=entries.filter(e=>!e.synced);
   if(!cfg.url||!pend.length) return;
   try{const r=await api({action:'save',entries:pend});
-    if(r.ok){pend.forEach(e=>e.synced=true);await persist();syncLine();render();}}catch(e){}
+    if(r.ok){await saveExtras(pend); pend.forEach(e=>e.synced=true);await persist();syncLine();render();}}catch(e){}
 }
 $('pull').onclick=async()=>{
   if(!cfg.url){toast(t('needSheet'));return;}
@@ -712,6 +725,7 @@ $('save').onclick=async()=>{
     location:$('f_loc').value.trim(), labours:parseInt($('f_num').value,10)||0,
     rate:parseFloat($('f_rate').value)||0, purpose:purpose, reason:reason,
     pulleyDays: $('f_pulley').checked ? Math.max(1,parseInt($('f_pulley_days').value,10)||1) : 0,
+    pulleys: $('f_pulley').checked ? Math.max(1,parseInt($('f_pulley_no').value,10)||1) : 0,
     note:$('f_note').value.trim(), synced:false,
     by: (editId && (entries.find(x=>x.id===editId)||{}).by) || me.name
   };
@@ -724,7 +738,10 @@ $('save').onclick=async()=>{
   await persist(); resetForm(); monthOptions(); render(); syncLine(); pushOne(e);
 };
 $('cancel').onclick=resetForm;
-$('f_pulley').addEventListener('change',()=>$('pulleyDaysWrap').classList.toggle('hide',!$('f_pulley').checked));
+function pulleyCalc(){const n=Math.max(1,parseInt($('f_pulley_no').value,10)||1),d=Math.max(1,parseInt($('f_pulley_days').value,10)||1);
+  $('pulleyCalc').textContent=n+' × '+d+' × ₹1,500 = '+money(n*d*PULLEY_RATE);}
+$('f_pulley').addEventListener('change',()=>{$('pulleyDaysWrap').classList.toggle('hide',!$('f_pulley').checked);pulleyCalc();});
+$('f_pulley_no').oninput=pulleyCalc; $('f_pulley_days').oninput=pulleyCalc;
 
 function resetForm(){
   editId=null;
@@ -734,7 +751,7 @@ function resetForm(){
   $('f_date').value=new Date().toISOString().slice(0,10);
   ['f_offer','f_cust','f_loc','f_note'].forEach(i=>$(i).value='');
   $('f_num').value=2; $('f_rate').value=800; setPurpose('Unloading'); setReason('Work');
-  $('f_pulley').checked=false; $('f_pulley_days').value=1; $('pulleyDaysWrap').classList.add('hide');
+  $('f_pulley').checked=false; $('f_pulley_days').value=1; $('f_pulley_no').value=1; $('pulleyDaysWrap').classList.add('hide');
 }
 function edit(id){
   const e=entries.find(x=>x.id===id); if(!e)return;
@@ -745,7 +762,7 @@ function edit(id){
   $('f_date').value=e.date; $('f_offer').value=e.offer||''; $('f_cust').value=e.customer||'';
   $('f_loc').value=e.location||''; $('f_num').value=e.labours; $('f_rate').value=e.rate;
   $('f_note').value=e.note||''; setPurpose(e.purpose||'Unloading'); setReason(e.reason||'Work');
-  $('f_pulley').checked=!!e.pulleyDays; $('f_pulley_days').value=e.pulleyDays||1;
+  $('f_pulley').checked=!!e.pulleyDays; $('f_pulley_days').value=e.pulleyDays||1; $('f_pulley_no').value=pulleyNo(e)||1; pulleyCalc();
   $('pulleyDaysWrap').classList.toggle('hide',!e.pulleyDays);
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -808,7 +825,7 @@ function render(){
           <span class="tag">${t(e.purpose==='Shifting'?'shifting':'unloading')}</span>
           <span class="tag ${(e.reason||'Work')==='Rework'?'rw':''}">${t((e.reason||'Work')==='Rework'?'rework':'work')}</span>
           <span class="tag ${e.synced?'sync':'pend'}">${e.synced?t('synced'):t('pending')}</span>
-          ${e.pulleyDays?`<span class="tag" style="border-color:#e2f14d;color:#e2f14d">⛓ ${t('pulleyTag')} ${e.pulleyDays>1?('× '+e.pulleyDays+'d'):''} · ${money(pulleyCost(e))}</span>`:''}
+          ${e.pulleyDays?`<span class="tag" style="border-color:#e2f14d;color:#e2f14d">⛓ ${t('pulleyTag')} ${pulleyTxt(e)} · ${money(pulleyCost(e))}</span>`:''}
           <span>${e.labours} × ${money(e.rate)}</span>
           ${e.location?`<span>· ${esc(e.location)}</span>`:''}
           ${e.by?`<span>· 👤 ${esc(e.by)}</span>`:''}
@@ -825,9 +842,9 @@ $('q').oninput=render; $('fMonth').onchange=render; $('fPurpose').onchange=rende
 
 $('csv').onclick=()=>{
   const rows=filtered(); if(!rows.length){toast(t('nothing'));return;}
-  const head=['Date','Billing Period','Offer No','Customer','Location','No of Labours','Purpose','Reason','Rate','Chain Pulley','Amount','Remarks'];
+  const head=['Date','Billing Period','Offer No','Customer','Location','No of Labours','Purpose','Reason','Rate','Pulleys','Pulley Days','Chain Pulley','Amount','Remarks'];
   const body=rows.map(e=>[e.date,periodOf(e.date),e.offer,e.customer,e.location,e.labours,e.purpose,
-    e.reason||'Work',e.rate,pulleyCost(e),entryAmt(e),e.note||'']);
+    e.reason||'Work',e.rate,pulleyNo(e),Number(e.pulleyDays)||0,pulleyCost(e),entryAmt(e),e.note||'']);
   const csv=[head,...body].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));
@@ -852,7 +869,7 @@ function docTable(rows,showRem){
       <td>${esc(e.location)}</td><td>${t(e.purpose==='Shifting'?'shifting':'unloading')}</td>
       <td>${t((e.reason||'Work')==='Rework'?'rework':'work')}</td>
       <td class="n">${e.labours}</td><td class="n">${Number(e.rate).toFixed(0)}</td>
-      <td class="n">${entryAmt(e).toFixed(0)}${e.pulleyDays?`<div style="font-size:.8em;color:#666">+₹${pulleyCost(e)} ⛓</div>`:''}</td>${showRem?`<td>${esc(e.note)}</td>`:''}</tr>`).join('')}
+      <td class="n">${entryAmt(e).toFixed(0)}${e.pulleyDays?`<div style="font-size:.8em;color:#666">+₹${pulleyCost(e)} ⛓ ${pulleyTxt(e)}</div>`:''}</td>${showRem?`<td>${esc(e.note)}</td>`:''}</tr>`).join('')}
     <tr class="tot"><td colspan="7">${t('total')}</td><td class="n">${lab}</td><td></td>
       <td class="n">${money(amt)}</td>${showRem?'<td></td>':''}</tr></tbody></table>`;
 }
